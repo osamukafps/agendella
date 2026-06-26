@@ -1,0 +1,13 @@
+.git/
+.gitignore
+.dockerignore
+node_modules/
+dist/
+build/
+coverage/
+bin/
+obj/
+.env
+.env.*
+specs/
+docs/
