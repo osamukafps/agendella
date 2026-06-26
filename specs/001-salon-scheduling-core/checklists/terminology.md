@@ -48,7 +48,7 @@ ambiguousos no documento de requisitos.
 - [x] CHK010 Do any phrases mix business language and implementation-oriented language in ways that
   could confuse requirement readers, such as tenant-scoping terminology versus salon operations
   terminology? [Conflict, Spec §FR-002, Spec §CC-001, Spec §Assumptions]
-- [ ] CHK011 Are there any terms whose meaning changes depending on section, such as "historico",
+- [x] CHK011 Are there any terms whose meaning changes depending on section, such as "historico",
   "operacao interna", or "sob sua responsabilidade"? [Ambiguity, Spec §User Story 2-3, Spec
   §CC-003, Spec §Key Entities]
 

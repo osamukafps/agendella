@@ -14,7 +14,7 @@
 
 - Q: No MVP, entidades como servico, profissional e cliente podem ser excluidas fisicamente ou apenas desativadas? → A: Nao permitir exclusao fisica no MVP; apenas desativacao logica para servico, profissional e cliente, preservando historico e agendamentos.
 - Q: A disponibilidade das profissionais no MVP herda apenas o horario do salao ou cada profissional tem disponibilidade semanal propria? → A: Cada profissional tem sua propria disponibilidade semanal recorrente, sempre limitada tambem pelo horario do salao.
-- Q: Como o MVP trata fuso horario? → A: Todos os saloes do MVP usam um unico fuso padrao, America/Sao_Paulo; nao existe fuso configuravel por salao nem mudanca de fuso no MVP.
+- Q: Como o MVP trata fuso horario? → A: Decisao inicial substituida em 2026-06-25: cada salao possui um fuso IANA configuravel e armazenado no cadastro, com America/Sao_Paulo como valor padrao de seed do tenant piloto.
 - Q: Existe algum acesso funcional cross-tenant no MVP? → A: Nao existe nenhum acesso funcional cross-tenant no MVP; toda operacao sempre acontece dentro de um tenant ativo.
 - Q: Dois agendamentos podem ser consecutivos quando o primeiro termina exatamente no horario em que o proximo comeca? → A: Sim. Agendamentos consecutivos sao permitidos quando o primeiro termina exatamente no instante em que o proximo comeca.
 - Q: Quais entidades precisam estar ativas para que um novo agendamento ou remarcacao seja valido? → A: Novo agendamento ou remarcacao so e valido se salao, profissional, servico e cliente estiverem ativos e pertencerem ao tenant ativo.
@@ -68,6 +68,15 @@
 - Q: E util ter um cenario consolidado para validar o papel completo da profissional? → A: Sim. O spec deve incluir um cenario consolidado que valide agenda propria, operacao sobre cliente do proprio tenant, alteracao de agendamento proprio e ausencia de acesso fora do escopo.
 - Q: O spec deve ter um glossario explicito para os termos centrais do dominio? → A: Sim. O spec deve incluir um glossario curto com os termos centrais de papeis, tenant, agenda, agendamento, lifecycle e disponibilidade.
 
+### Session 2026-06-25
+
+- Q: O plano tecnico mantem fuso unico fixo ou cada salao possui fuso IANA declarado? → A: Cada salao possui um fuso IANA configuravel e armazenado no cadastro, com America/Sao_Paulo como valor padrao de seed do tenant piloto. Timestamps sao armazenados em UTC e exibidos/avaliados nas bordas conforme o fuso do salao.
+
+### Session 2026-06-26
+
+- Q: No MVP, servicos pertencem a profissionais especificas ou ao salao? → A: Servicos pertencem ao salao. Qualquer profissional ativa do mesmo tenant pode executar qualquer servico ativo do salao; nao existe vinculo por servico-profissional no MVP.
+- Q: O telefone da cliente precisa ser unico? → A: Sim. No MVP, telefone de cliente deve ser unico por tenant; o mesmo telefone pode existir em tenants diferentes.
+
 ## Glossary
 
 - **Salao / Tenant**: no MVP, cada salao corresponde exatamente a um tenant; os termos podem ser
@@ -113,8 +122,9 @@ e profissional, e consulta o historico de uma cliente do proprio tenant.
 **Acceptance Scenarios**:
 
 1. **Given** uma administradora autenticada no tenant do salao, **When** ela cadastra nome,
-   endereco, telefone e horario de funcionamento por dia da semana, **Then** o salao fica
-   configurado para agendamento dentro daquele tenant, usando o fuso padrao America/Sao_Paulo.
+   endereco, telefone, fuso IANA e horario de funcionamento por dia da semana, **Then** o salao
+   fica configurado para agendamento dentro daquele tenant, usando o fuso armazenado no cadastro do
+   salao.
 2. **Given** uma administradora autenticada no tenant do salao, **When** ela cadastra, altera,
    ativa ou desativa clientes do proprio tenant, **Then** esses registros ficam disponiveis para a
    operacao do salao sem afetar dados de outro tenant.
@@ -171,7 +181,7 @@ proprio e registra uma ausencia que bloqueia novas marcacoes naquele periodo.
 
 1. **Given** uma profissional autenticada em um tenant, **When** ela abre a agenda, **Then** ela
    visualiza seus proprios agendamentos, suas proprias ausencias e os bloqueios ou
-   indisponibilidades que afetem sua agenda, no fuso padrao America/Sao_Paulo, sem ver a agenda
+   indisponibilidades que afetem sua agenda, no fuso IANA configurado no cadastro do salao, sem ver a agenda
    detalhada de outras profissionais.
 2. **Given** um horario disponivel e os dados de um cliente novo, **When** a profissional cria um
    agendamento manual para si mesma dentro da sua disponibilidade semanal, **Then** o cliente e
@@ -296,8 +306,9 @@ claras quando nao ha horario disponivel.
   disponibilidade semanal da profissional, bloqueios do salao, ausencias pontuais da
   profissional e, por fim, conflito na agenda da mesma profissional; se qualquer camada bloquear o
   horario, ele fica indisponivel.
-- No MVP, todos os horarios devem ser interpretados, armazenados e exibidos no fuso padrao
-  America/Sao_Paulo; nao existe mudanca de fuso por salao.
+- No MVP, cada salao possui um fuso IANA configuravel e armazenado no cadastro. Todos os
+  timestamps devem ser armazenados em UTC e exibidos/avaliados nas bordas conforme o fuso do
+  salao; o tenant piloto usa America/Sao_Paulo apenas como valor padrao de seed.
 - O inicio do atendimento pode coincidir exatamente com a abertura do salao e com o inicio da
   disponibilidade semanal da profissional.
 - O atendimento pode terminar depois do horario de fechamento do salao e da disponibilidade da
@@ -312,6 +323,9 @@ claras quando nao ha horario disponivel.
 - Se a cliente for desativada, novos agendamentos e remarcacoes ficam bloqueados, mas os
   agendamentos futuros ja existentes permanecem preservados e devem ser sinalizados para revisao
   manual.
+- Se uma usuaria tentar cadastrar ou atualizar uma cliente com telefone que ja exista no mesmo
+  tenant, o sistema deve rejeitar a operacao com erro claro; o mesmo telefone pode existir em
+  outro tenant.
 - Se uma usuaria tentar excluir fisicamente um servico, uma profissional ou uma cliente, o sistema
   deve bloquear a exclusao e orientar o uso de desativacao logica para preservar historico e
   agendamentos existentes.
@@ -335,7 +349,7 @@ claras quando nao ha horario disponivel.
 ### Functional Requirements
 
 - **FR-001**: O sistema MUST permitir que uma administradora cadastre e mantenha o perfil do salao
-  com nome, endereco, telefone e horario de funcionamento por dia da semana.
+  com nome, endereco, telefone, fuso IANA e horario de funcionamento por dia da semana.
 - **FR-002**: O sistema MUST tratar cada salao como um tenant isolado com seus proprios usuarios,
   profissionais, servicos, clientes, agendamentos, bloqueios, ausencias e historico.
 - **FR-002C**: No MVP, cada salao MUST corresponder exatamente a um tenant, e os termos salao e
@@ -349,6 +363,9 @@ claras quando nao ha horario disponivel.
 - **FR-003**: O sistema MUST permitir que a administradora cadastre, altere, ative e desative
   servicos com nome, descricao, duracao padrao em minutos e preco. A duracao do servico MUST ser
   maior que zero.
+- **FR-003A**: Cada servico ativo MUST pertencer ao salao e MAY ser associado a qualquer
+  profissional ativa do mesmo tenant no momento do agendamento. O MVP MUST nao exigir nem manter
+  vinculo especifico entre servico e profissional.
 - **FR-004**: O sistema MUST permitir que a administradora cadastre, altere, ative e desative
   profissionais pertencentes ao tenant, incluindo sua disponibilidade semanal recorrente.
 - **FR-005**: O sistema MUST permitir que a administradora crie, altere, visualize e cancele
@@ -384,6 +401,9 @@ claras quando nao ha horario disponivel.
   proprio tenant quando isso fizer parte da operacao diaria dela.
 - **FR-008**: O sistema MUST permitir que o salao registre, altere, ative e desative clientes com
   dados de contato e historico de relacionamento necessarios para atendimento e agendamento.
+- **FR-008A**: O telefone da cliente MUST ser unico dentro de cada tenant. O sistema MUST rejeitar
+  criacao ou atualizacao de cliente com telefone duplicado no mesmo tenant e MAY permitir o mesmo
+  telefone em tenants diferentes.
 - **FR-009**: O sistema MUST calcular a janela de um agendamento a partir do horario de inicio e da
   duracao do servico, exceto quando uma data prevista de fim for informada manualmente, caso em
   que o horario de fim informado prevalece. Se o horario de fim manual for menor ou igual ao
@@ -422,10 +442,10 @@ claras quando nao ha horario disponivel.
   bloqueio ou ausencia que afete disponibilidade. Se outra operacao tiver ocupado ou bloqueado o
   horario antes, a operacao perdedora MUST ser rejeitada com erro claro e MUST nao ajustar
   automaticamente o estado conflitante.
-- **FR-017**: O sistema MUST interpretar, armazenar de forma inequivoca e exibir todos os horarios
-  do MVP no fuso padrao America/Sao_Paulo em todas as visoes da agenda e de operacao interna.
-- **FR-018**: O sistema MUST nao oferecer configuracao ou alteracao de fuso horario por salao no
-  MVP.
+- **FR-017**: O sistema MUST armazenar todos os timestamps em UTC e exibir ou avaliar horarios de
+  agenda e operacao interna conforme o fuso IANA configurado e armazenado no cadastro do salao.
+- **FR-018**: O sistema MUST permitir cadastrar e alterar um fuso IANA valido para cada salao como
+  parte do seu cadastro. O tenant piloto usa America/Sao_Paulo apenas como valor padrao de seed.
 - **FR-019**: O sistema MUST permitir visualizacao da agenda do salao por dia, por semana e por
   profissional para a administradora.
 - **FR-019A**: Agenda do dia, agenda da semana, agenda por profissional e quaisquer consolidacoes
@@ -510,10 +530,10 @@ claras quando nao ha horario disponivel.
   permissoes devem existir como regras de servidor e nao apenas de interface.
 - **CC-004**: Conflito de horario, disponibilidade, bloqueios, ausencias, duracao do servico,
   horario de fim manual, horario de funcionamento, disponibilidade semanal recorrente por
-  profissional, uso obrigatorio do fuso America/Sao_Paulo no MVP e janela de
-  cancelamento/remarcacao formam o conjunto minimo de invariantes obrigatorios desta feature. Nos
-  trechos operacionais da spec, a validacao de disponibilidade deve aparecer na mesma ordem:
-  horario do salao, disponibilidade semanal da profissional, bloqueios do salao, ausencias
+  profissional, uso obrigatorio do fuso IANA configurado e armazenado no cadastro do salao, e
+  janela de cancelamento/remarcacao formam o conjunto minimo de invariantes obrigatorios desta
+  feature. Nos trechos operacionais da spec, a validacao de disponibilidade deve aparecer na mesma
+  ordem: horario do salao, disponibilidade semanal da profissional, bloqueios do salao, ausencias
   pontuais e conflito na agenda da mesma profissional.
 - **CC-005**: Dados pessoais do cliente devem ser minimizados ao necessario para agendamento,
   consulta do historico e contato operacional do salao, com possibilidade de exportacao e exclusao
@@ -531,8 +551,8 @@ claras quando nao ha horario disponivel.
 ### Key Entities *(include if feature involves data)*
 
 - **Salon Tenant**: representa um salao independente com identidade, contato, horario de
-  funcionamento, politica de cancelamento/remarcacao e estado operacional, sempre operando no fuso
-  padrao America/Sao_Paulo no MVP.
+  funcionamento, politica de cancelamento/remarcacao, fuso IANA configurado e armazenado no
+  cadastro, e estado operacional.
 - **Colaboradora do Salao**: representa uma pessoa autenticada do tenant com papel de
   administradora ou profissional e permissoes ligadas a operacao do salao. Cada Colaboradora do
   Salao pertence a um unico tenant, e esse tenant define sempre o tenant ativo do usuario no MVP.
@@ -543,7 +563,7 @@ claras quando nao ha horario disponivel.
   preco e estado ativo ou inativo. Cada Service pertence a um unico tenant.
 - **Client**: representa a cliente atendida pelo salao com dados de contato, historico de
   agendamentos, no-shows, cancelamentos e estado ativo ou inativo no contexto daquele tenant. Cada
-  Client pertence a um unico tenant.
+  Client pertence a um unico tenant, e seu telefone e unico dentro desse tenant.
 - **Appointment**: representa um atendimento agendado com cliente, profissional, servico,
   inicio, fim efetivo, origem interna da marcacao, estado e eventos de remarcacao ou cancelamento.
   Cada Appointment pertence a um unico tenant e so pode referenciar cliente, profissional e
@@ -575,8 +595,8 @@ claras quando nao ha horario disponivel.
   nenhum dado de outro tenant.
 - **SC-004**: Pelo menos 95% das tarefas principais de marcar, cancelar ou remarcar um atendimento
   sao concluidas por administradora e profissional em ate 3 minutos em navegador mobile.
-- **SC-005**: 100% dos agendamentos exibidos nas validacoes de aceitacao aparecem no fuso padrao
-  America/Sao_Paulo.
+- **SC-005**: 100% dos agendamentos exibidos nas validacoes de aceitacao aparecem no fuso IANA
+  configurado no cadastro do salao.
 - **SC-006**: Quando nao houver disponibilidade no periodo pesquisado, 100% das validacoes de
   experiencia para usuarias internas mostram mensagem clara de indisponibilidade sem oferecer
   horarios invalidos.
@@ -590,8 +610,8 @@ claras quando nao ha horario disponivel.
 
 - O MVP tera uma experiencia web responsiva para administradora e profissional; app nativo e fluxo
   publico para clientes permanecem fora de escopo.
-- Todos os saloes do MVP operam no fuso padrao America/Sao_Paulo; configuracao de fuso por salao
-  fica fora de escopo.
+- Cada salao possui um fuso IANA configuravel e armazenado no cadastro; o tenant piloto usa
+  America/Sao_Paulo apenas como valor padrao de seed.
 - Clientes nao sao usuarios autenticados do sistema neste MVP; seus dados existem apenas
   como registros operacionais do tenant.
 - O MVP nao aplicara bloqueio automatico a clientes com historico de no-show ou cancelamento

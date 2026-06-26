@@ -1,0 +1,1682 @@
+openapi: 3.1.0
+info:
+  title: Agendella Scheduling Core API
+  version: 0.2.0
+  description: REST contract for the salon scheduling core MVP.
+servers:
+  - url: https://api.agendella.example.com
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AppointmentIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProfessionalIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ClientIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ServiceIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SalonBlockIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AbsenceIdPath:
+      name: absenceId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 50
+        minimum: 1
+        maximum: 100
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        nullable: true
+    FromDateTime:
+      name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+    ToDateTime:
+      name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+    CsrfProtectionHeader:
+      name: X-CSRF-Protection
+      in: header
+      required: true
+      schema:
+        type: string
+        const: '1'
+      description: Required on cookie-based state-changing auth endpoints.
+  headers:
+    RetryAfter:
+      description: Seconds until the client may retry.
+      schema:
+        type: integer
+    SetRefreshCookie:
+      description: Sets or clears the refresh token cookie for the backend domain with HttpOnly, Secure, SameSite=Strict, and Path=/auth.
+      schema:
+        type: string
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          examples: [appointment.overlap, client.phone.duplicate, professional.inactive, rate_limit.exceeded]
+        message:
+          type: string
+          description: Human-readable message in pt-BR.
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Optional error-specific details.
+    AppointmentConflictDetails:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum:
+            - salon_block
+            - professional_absence
+            - outside_business_hours
+            - outside_professional_availability
+            - overlap_with_appointment
+        startAtUtc:
+          type: string
+          format: date-time
+        endAtUtc:
+          type: string
+          format: date-time
+        resourceId:
+          type: string
+          format: uuid
+          nullable: true
+        resourceName:
+          type: string
+          nullable: true
+    AppointmentConflictResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            details:
+              $ref: '#/components/schemas/AppointmentConflictDetails'
+    PaginatedResponse:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: {}
+        nextCursor:
+          type: string
+          nullable: true
+    TokenResponse:
+      type: object
+      required: [accessToken, expiresAtUtc]
+      properties:
+        accessToken:
+          type: string
+        expiresAtUtc:
+          type: string
+          format: date-time
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    MeResponse:
+      type: object
+      required: [collaboratorId, tenantId, role, status]
+      properties:
+        collaboratorId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        professionalId:
+          type: string
+          format: uuid
+          nullable: true
+        role:
+          type: string
+          enum: [administradora, profissional]
+        status:
+          type: string
+          enum: [active, inactive]
+    Salon:
+      type: object
+      required: [id, name, timeZoneId, status, minimumCancellationNoticeMinutes]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        timeZoneId:
+          type: string
+          example: America/Sao_Paulo
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        minimumCancellationNoticeMinutes:
+          type: integer
+          minimum: 0
+    SalonUpdateRequest:
+      type: object
+      required: [name, phone, timeZoneId, minimumCancellationNoticeMinutes]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        timeZoneId:
+          type: string
+        minimumCancellationNoticeMinutes:
+          type: integer
+          minimum: 0
+    BusinessHour:
+      type: object
+      required: [dayOfWeek, isClosed]
+      properties:
+        dayOfWeek:
+          type: string
+          enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+        isClosed:
+          type: boolean
+        startLocalTime:
+          type: string
+          nullable: true
+          example: '09:00'
+        endLocalTime:
+          type: string
+          nullable: true
+          example: '18:00'
+    BusinessHoursUpdateRequest:
+      type: array
+      minItems: 7
+      maxItems: 7
+      items:
+        $ref: '#/components/schemas/BusinessHour'
+    Professional:
+      type: object
+      required: [id, name, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        status:
+          type: string
+          enum: [active, inactive]
+    ProfessionalCreateOrUpdateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+    WeeklyAvailabilityWindow:
+      type: object
+      required: [dayOfWeek, startLocalTime, endLocalTime]
+      properties:
+        dayOfWeek:
+          type: string
+          enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+        startLocalTime:
+          type: string
+          example: '09:00'
+        endLocalTime:
+          type: string
+          example: '17:00'
+    WeeklyAvailabilityUpdateRequest:
+      type: array
+      items:
+        $ref: '#/components/schemas/WeeklyAvailabilityWindow'
+    ProfessionalAbsence:
+      type: object
+      required: [id, professionalId, startAtUtc, endAtUtc, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        professionalId:
+          type: string
+          format: uuid
+        startAtUtc:
+          type: string
+          format: date-time
+        endAtUtc:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [active, cancelled]
+    ProfessionalAbsenceCreateRequest:
+      type: object
+      required: [professionalId, startAtLocal, endAtLocal]
+      properties:
+        professionalId:
+          type: string
+          format: uuid
+        startAtLocal:
+          type: string
+          example: '2026-06-25T09:00:00'
+        endAtLocal:
+          type: string
+          example: '2026-06-25T13:00:00'
+        reason:
+          type: string
+    Service:
+      type: object
+      required: [id, name, durationMinutes, priceAmount, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        durationMinutes:
+          type: integer
+          minimum: 1
+        priceAmount:
+          type: number
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+    ServiceCreateOrUpdateRequest:
+      type: object
+      required: [name, durationMinutes, priceAmount]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        durationMinutes:
+          type: integer
+          minimum: 1
+        priceAmount:
+          type: number
+        currency:
+          type: string
+    Client:
+      type: object
+      required: [id, name, phone, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+    ClientCreateOrUpdateRequest:
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        notes:
+          type: string
+    ClientHistoryEvent:
+      type: object
+      required: [id, clientId, type, occurredAtUtc]
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        appointmentId:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+          enum: [appointmentCreated, rescheduled, cancelled, lateCancelled, noShow, reviewRequired, reviewResolved, completed]
+        occurredAtUtc:
+          type: string
+          format: date-time
+        description:
+          type: string
+    Appointment:
+      type: object
+      required: [id, clientId, professionalId, serviceId, startAtUtc, endAtUtc, status, requiresReview]
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        professionalId:
+          type: string
+          format: uuid
+        serviceId:
+          type: string
+          format: uuid
+        startAtUtc:
+          type: string
+          format: date-time
+        endAtUtc:
+          type: string
+          format: date-time
+        localStart:
+          type: string
+        localEnd:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, cancelled, completed, noShow]
+        requiresReview:
+          type: boolean
+        reviewReason:
+          type: string
+          nullable: true
+    AppointmentCreateRequest:
+      type: object
+      required: [clientId, professionalId, serviceId, startAtLocal]
+      properties:
+        clientId:
+          type: string
+          format: uuid
+        professionalId:
+          type: string
+          format: uuid
+        serviceId:
+          type: string
+          format: uuid
+        startAtLocal:
+          type: string
+          example: '2026-06-25T14:00:00'
+        manualEndAtLocal:
+          type: string
+          example: '2026-06-25T15:30:00'
+    AppointmentActionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+    ReviewResolutionRequest:
+      type: object
+      properties:
+        note:
+          type: string
+    AvailabilitySlot:
+      type: object
+      required: [startAtUtc, endAtUtc, localStart, localEnd]
+      properties:
+        startAtUtc:
+          type: string
+          format: date-time
+        endAtUtc:
+          type: string
+          format: date-time
+        localStart:
+          type: string
+        localEnd:
+          type: string
+    SalonBlock:
+      type: object
+      required: [id, startAtUtc, endAtUtc]
+      properties:
+        id:
+          type: string
+          format: uuid
+        startAtUtc:
+          type: string
+          format: date-time
+        endAtUtc:
+          type: string
+          format: date-time
+        reason:
+          type: string
+    SalonBlockCreateRequest:
+      type: object
+      required: [startAtLocal, endAtLocal]
+      properties:
+        startAtLocal:
+          type: string
+          example: '2026-12-24T00:00:00'
+        endAtLocal:
+          type: string
+          example: '2026-12-24T23:59:00'
+        reason:
+          type: string
+    PaginatedClientsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Client'
+    PaginatedServicesResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Service'
+    PaginatedProfessionalsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Professional'
+    PaginatedAppointmentsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Appointment'
+    PaginatedSalonBlocksResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SalonBlock'
+  responses:
+    BadRequestError:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Authentication required or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: Operation not allowed for the current role or scope.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Resource not found in the active tenant.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConflictError:
+      description: Operation conflicts with current resource state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    AppointmentConflictError:
+      description: Scheduling conflict or invalid availability window.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppointmentConflictResponse'
+    TooManyRequestsError:
+      description: Rate limit exceeded.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+paths:
+  /auth/login:
+    post:
+      security: []
+      summary: Authenticate a collaborator
+      description: Validates credentials, returns a short-lived JWT access token in the response body, and sets the rotating refresh token exclusively as an HttpOnly, Secure, SameSite=Strict cookie scoped to `Path=/auth` on the backend domain.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Access token issued and refresh-token cookie set.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetRefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/refresh:
+    post:
+      security: []
+      summary: Rotate refresh token and issue a new access token
+      description: Reads the refresh token automatically from the secure HttpOnly cookie, requires `X-CSRF-Protection: 1`, rotates the stored session, returns a new access token in the response body, and refreshes the cookie. No request body is accepted.
+      parameters:
+        - $ref: '#/components/parameters/CsrfProtectionHeader'
+      responses:
+        '200':
+          description: Token refreshed and cookie rotated.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetRefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/logout:
+    post:
+      security: []
+      summary: Revoke the refresh-token session and clear the refresh-token cookie
+      description: Reads the refresh token automatically from the secure HttpOnly cookie, requires `X-CSRF-Protection: 1`, revokes the persisted refresh-token session, and clears the cookie from the backend domain.
+      parameters:
+        - $ref: '#/components/parameters/CsrfProtectionHeader'
+      responses:
+        '204':
+          description: Logged out and cookie cleared.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetRefreshCookie'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me:
+    get:
+      summary: Get current collaborator context
+      responses:
+        '200':
+          description: Current tenant, role, and profile scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /salon:
+    get:
+      summary: Get active tenant salon profile
+      responses:
+        '200':
+          description: Salon profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salon'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update salon profile and settings
+      description: Administradora only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalonUpdateRequest'
+      responses:
+        '200':
+          description: Updated salon.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Salon'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /salon/business-hours:
+    get:
+      summary: Get salon business hours
+      responses:
+        '200':
+          description: Seven-entry business-hours array.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BusinessHour'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Replace salon business hours
+      description: Administradora only. Accepts an array of seven entries, one per day of week.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessHoursUpdateRequest'
+      responses:
+        '200':
+          description: Updated business hours.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BusinessHour'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /services:
+    get:
+      summary: List tenant services
+      parameters:
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Services for the active tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedServicesResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create service
+      description: Administradora only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCreateOrUpdateRequest'
+      responses:
+        '201':
+          description: Service created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /services/{id}:
+    get:
+      summary: Get service by id
+      parameters:
+        - $ref: '#/components/parameters/ServiceIdPath'
+      responses:
+        '200':
+          description: Tenant service.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update service
+      description: Administradora only.
+      parameters:
+        - $ref: '#/components/parameters/ServiceIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCreateOrUpdateRequest'
+      responses:
+        '200':
+          description: Service updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /services/{id}/deactivate:
+    post:
+      summary: Deactivate service and mark affected future appointments for review
+      description: Administradora only.
+      parameters:
+        - $ref: '#/components/parameters/ServiceIdPath'
+      responses:
+        '200':
+          description: Service deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /professionals:
+    get:
+      summary: List tenant professionals
+      parameters:
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Professionals for the active tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProfessionalsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create professional
+      description: Administradora only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfessionalCreateOrUpdateRequest'
+      responses:
+        '201':
+          description: Professional created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Professional'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /professionals/{id}:
+    get:
+      summary: Get professional by id
+      parameters:
+        - $ref: '#/components/parameters/ProfessionalIdPath'
+      responses:
+        '200':
+          description: Tenant professional.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Professional'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update professional
+      description: Administradora only.
+      parameters:
+        - $ref: '#/components/parameters/ProfessionalIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfessionalCreateOrUpdateRequest'
+      responses:
+        '200':
+          description: Professional updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Professional'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /professionals/{id}/deactivate:
+    post:
+      summary: Deactivate professional and mark affected future appointments for review
+      description: Administradora only.
+      parameters:
+        - $ref: '#/components/parameters/ProfessionalIdPath'
+      responses:
+        '200':
+          description: Professional deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Professional'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /professionals/{id}/weekly-availability:
+    get:
+      summary: Get weekly availability for a professional
+      parameters:
+        - $ref: '#/components/parameters/ProfessionalIdPath'
+      responses:
+        '200':
+          description: Weekly availability windows.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WeeklyAvailabilityWindow'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Replace weekly availability for a professional
+      description: Administradora or the same profissional for herself.
+      parameters:
+        - $ref: '#/components/parameters/ProfessionalIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyAvailabilityUpdateRequest'
+      responses:
+        '200':
+          description: Weekly availability updated.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WeeklyAvailabilityWindow'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /professionals/{id}/absences:
+    get:
+      summary: List absences for a professional
+      parameters:
+        - $ref: '#/components/parameters/ProfessionalIdPath'
+      responses:
+        '200':
+          description: Professional absences.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProfessionalAbsence'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /professionals/{id}/absences/{absenceId}/cancel:
+    post:
+      summary: Cancel a professional absence
+      description: Administradora or the same profissional for herself, subject to permission rules.
+      parameters:
+        - $ref: '#/components/parameters/ProfessionalIdPath'
+        - $ref: '#/components/parameters/AbsenceIdPath'
+      responses:
+        '200':
+          description: Absence cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionalAbsence'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /professional-absences:
+    post:
+      summary: Create professional absence and mark affected appointments for review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfessionalAbsenceCreateRequest'
+      responses:
+        '201':
+          description: Absence created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionalAbsence'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /clients:
+    get:
+      summary: Search clients in active tenant
+      parameters:
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Tenant-scoped client results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClientsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create client in active tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreateOrUpdateRequest'
+      responses:
+        '201':
+          description: Client created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: Duplicate phone in the same tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /clients/{id}:
+    get:
+      summary: Get client by id
+      parameters:
+        - $ref: '#/components/parameters/ClientIdPath'
+      responses:
+        '200':
+          description: Tenant client.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update client
+      parameters:
+        - $ref: '#/components/parameters/ClientIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreateOrUpdateRequest'
+      responses:
+        '200':
+          description: Client updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /clients/{id}/deactivate:
+    post:
+      summary: Deactivate client, preserve future appointments, and mark them for review
+      parameters:
+        - $ref: '#/components/parameters/ClientIdPath'
+      responses:
+        '200':
+          description: Client deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /clients/{id}/history:
+    get:
+      summary: Read client history
+      description: Administradora sees tenant history; profissional sees only own appointment history.
+      parameters:
+        - $ref: '#/components/parameters/ClientIdPath'
+      responses:
+        '200':
+          description: Authorized history records.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientHistoryEvent'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /appointments:
+    get:
+      summary: List agenda appointments
+      parameters:
+        - $ref: '#/components/parameters/FromDateTime'
+        - $ref: '#/components/parameters/ToDateTime'
+        - name: professionalId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Tenant and role scoped appointments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAppointmentsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create appointment after transaction-scoped availability validation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreateRequest'
+      responses:
+        '201':
+          description: Appointment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/AppointmentConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /appointments/{id}/reschedule:
+    post:
+      summary: Reschedule appointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreateRequest'
+      responses:
+        '200':
+          description: Appointment rescheduled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/AppointmentConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /appointments/{id}/cancel:
+    post:
+      summary: Cancel appointment and create history event
+      parameters:
+        - $ref: '#/components/parameters/AppointmentIdPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentActionRequest'
+      responses:
+        '200':
+          description: Appointment cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /appointments/{id}/complete:
+    post:
+      summary: Mark appointment as completed and generate ClientHistoryEvent
+      parameters:
+        - $ref: '#/components/parameters/AppointmentIdPath'
+      responses:
+        '200':
+          description: Appointment completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /appointments/{id}/no-show:
+    post:
+      summary: Mark appointment as no-show and generate ClientHistoryEvent
+      parameters:
+        - $ref: '#/components/parameters/AppointmentIdPath'
+      responses:
+        '200':
+          description: Appointment marked as no-show.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /appointments/{id}/resolve-review:
+    post:
+      summary: Clear the review flag and generate a ReviewResolved event
+      parameters:
+        - $ref: '#/components/parameters/AppointmentIdPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewResolutionRequest'
+      responses:
+        '200':
+          description: Review resolved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /availability:
+    get:
+      summary: Search valid availability slots
+      parameters:
+        - name: professionalId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: serviceId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fromLocal
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: toLocal
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Valid slots only; empty array means no availability.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailabilitySlot'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /salon-blocks:
+    get:
+      summary: List salon blocks with period filter
+      parameters:
+        - $ref: '#/components/parameters/FromDateTime'
+        - $ref: '#/components/parameters/ToDateTime'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Salon blocks for the active tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSalonBlocksResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create tenant-wide block and mark affected appointments for review
+      description: Administradora only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalonBlockCreateRequest'
+      responses:
+        '201':
+          description: Block created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalonBlock'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /salon-blocks/{id}:
+    delete:
+      summary: Delete salon block
+      description: Administradora only.
+      parameters:
+        - $ref: '#/components/parameters/SalonBlockIdPath'
+      responses:
+        '204':
+          description: Block deleted.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
