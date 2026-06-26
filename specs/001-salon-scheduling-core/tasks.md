@@ -48,7 +48,7 @@
 - [x] T013 Create application error envelope and exception mapping primitives in `backend/Agendella.Application/Common/Errors/ApplicationError.cs`, `backend/Agendella.Application/Common/Errors/ErrorCodes.cs`, and `backend/Agendella.Api/Middleware/ErrorHandlingMiddleware.cs` (deps: T004)
 - [x] T014 [P] Create API response contracts for structured errors and pagination in `backend/Agendella.Api/Contracts/Common/ErrorResponse.cs`, `backend/Agendella.Api/Contracts/Common/AppointmentConflictResponse.cs`, and `backend/Agendella.Api/Contracts/Common/PaginatedResponse.cs` (deps: T004)
 - [x] T015 [P] Add backend integration test fixture for PostgreSQL connection strings and transactional cleanup in `backend/Agendella.Tests/Infrastructure/PostgresTestFixture.cs` (deps: T007, T012)
-- [ ] T016 [P] Add OpenAPI contract smoke test that validates structured 4xx/5xx responses exist in `backend/Agendella.Tests/Api/OpenApiContractTests.cs` (deps: T007, T014)
+- [x] T016 [P] Add OpenAPI contract smoke test that validates structured 4xx/5xx responses exist in `backend/Agendella.Tests/Api/OpenApiContractTests.cs` (deps: T007, T014)
 - [ ] T017 Create local migration and database command documentation in `docs/local-development.md` (deps: T012)
 - [ ] T018 Configure FluentValidation globally and map validation failures into `ErrorResponse` with code `validation.failed` in `backend/Agendella.Api/Validation/ValidationConfiguration.cs`, `backend/Agendella.Api/Program.cs`, and `backend/Agendella.Api/Middleware/ErrorHandlingMiddleware.cs` (deps: T013, T014)
 - [ ] T019 [P] Add automated tests for global validation pipeline and `validation.failed` error formatting in `backend/Agendella.Tests/Api/ValidationPipelineTests.cs` (deps: T018, T015)
