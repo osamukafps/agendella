@@ -1,9 +1,11 @@
 using Agendella.Api.Middleware;
+using Agendella.Api.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddApiValidation();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();

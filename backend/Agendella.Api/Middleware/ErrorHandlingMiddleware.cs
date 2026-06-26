@@ -1,4 +1,5 @@
 using Agendella.Application.Common.Errors;
+using FluentValidation;
 
 namespace Agendella.Api.Middleware;
 
@@ -14,6 +15,24 @@ public sealed class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorH
         {
             logger.LogWarning(exception, "Application error {ErrorCode}", exception.Error.Code);
             await WriteErrorAsync(context, exception.Error);
+        }
+        catch (ValidationException exception)
+        {
+            logger.LogWarning(exception, "Validation error while processing request");
+
+            var details = exception.Errors
+                .GroupBy(failure => failure.PropertyName)
+                .ToDictionary(
+                    group => group.Key,
+                    group => (object?)group.Select(failure => failure.ErrorMessage).ToArray());
+
+            var error = new ApplicationError(
+                ErrorCodes.ValidationFailed,
+                "Um ou mais campos da requisicao sao invalidos.",
+                StatusCodes.Status400BadRequest,
+                details);
+
+            await WriteErrorAsync(context, error);
         }
         catch (Exception exception)
         {
