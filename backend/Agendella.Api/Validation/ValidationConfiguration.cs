@@ -38,26 +38,13 @@ public sealed class ValidateRequestActionFilter(IServiceProvider serviceProvider
             var validatorType = typeof(IValidator<>).MakeGenericType(argument.GetType());
             var validator = serviceProvider.GetService(validatorType);
 
-            if (validator is null)
+            if (validator is not IValidator nonGenericValidator)
             {
                 continue;
             }
 
-            var validationContextType = typeof(ValidationContext<>).MakeGenericType(argument.GetType());
-            var validationContext = Activator.CreateInstance(validationContextType, argument)
-                ?? throw new InvalidOperationException($"Could not create validation context for {argument.GetType().Name}.");
-
-            var validateAsyncMethod = validatorType.GetMethod(nameof(IValidator<object>.ValidateAsync), [validationContextType, typeof(CancellationToken)])
-                ?? throw new InvalidOperationException($"Could not locate ValidateAsync on validator {validatorType.Name}.");
-
-            var task = (Task)validateAsyncMethod.Invoke(validator, [validationContext, context.HttpContext.RequestAborted])!;
-            await task;
-
-            var resultProperty = task.GetType().GetProperty("Result")
-                ?? throw new InvalidOperationException("Validation task did not expose a Result property.");
-
-            var result = resultProperty.GetValue(task) as ValidationResult
-                ?? throw new InvalidOperationException("Validation task result was not a ValidationResult.");
+            var validationContext = new ValidationContext<object>(argument);
+            var result = await nonGenericValidator.ValidateAsync(validationContext, context.HttpContext.RequestAborted);
 
             if (!result.IsValid)
             {
