@@ -22,3 +22,5 @@ app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }))
     .WithName("Healthz");
 
 app.Run();
+
+public partial class Program;
