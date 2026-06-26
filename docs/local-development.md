@@ -17,10 +17,24 @@
 ## Backend Bootstrap Commands
 
 ```bash
-dotnet restore backend/Agendella.slnx
-dotnet test backend/Agendella.slnx
+dotnet restore backend/Agendella.sln
+dotnet test backend/Agendella.sln
 dotnet run --project backend/Agendella.Api
 ```
+
+## EF Core Migrations
+
+```bash
+dotnet ef migrations add InitialCreate --project backend/Agendella.Infrastructure --startup-project backend/Agendella.Api
+dotnet ef database update --project backend/Agendella.Infrastructure --startup-project backend/Agendella.Api
+dotnet ef migrations list --project backend/Agendella.Infrastructure --startup-project backend/Agendella.Api
+```
+
+## Local Database Defaults
+
+- Development database: `agendella_dev`
+- Connection string source: `backend/Agendella.Api/appsettings.Development.json`
+- Integration test override env var: `AGENDLLA_TEST_POSTGRES`
 
 ## Frontend Bootstrap Commands
 
