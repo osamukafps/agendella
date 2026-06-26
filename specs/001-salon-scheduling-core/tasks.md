@@ -42,7 +42,7 @@
 
 **Goal**: Configure PostgreSQL local development, connection management, migrations command path, environment configuration, and shared API primitives.
 
-- [ ] T010 Add backend configuration options for PostgreSQL, JWT keys, refresh cookies, CORS, frontend origin, rate limits, and logging in `backend/Agendella.Api/appsettings.json` and `backend/Agendella.Api/appsettings.Development.json` (deps: T004)
+- [x] T010 Add backend configuration options for PostgreSQL, JWT keys, refresh cookies, CORS, frontend origin, rate limits, and logging in `backend/Agendella.Api/appsettings.json` and `backend/Agendella.Api/appsettings.Development.json` (deps: T004)
 - [ ] T011 Create strongly typed options classes in `backend/Agendella.Infrastructure/Configuration/DatabaseOptions.cs`, `backend/Agendella.Infrastructure/Auth/JwtOptions.cs`, `backend/Agendella.Infrastructure/Auth/RefreshCookieOptions.cs`, and `backend/Agendella.Api/Configuration/CorsOptions.cs` (deps: T010)
 - [ ] T012 Configure EF Core PostgreSQL package references and design-time factory in `backend/Agendella.Infrastructure/Agendella.Infrastructure.csproj` and `backend/Agendella.Infrastructure/Persistence/DesignTimeAgendellaDbContextFactory.cs` (deps: T003, T010)
 - [ ] T013 Create application error envelope and exception mapping primitives in `backend/Agendella.Application/Common/Errors/ApplicationError.cs`, `backend/Agendella.Application/Common/Errors/ErrorCodes.cs`, and `backend/Agendella.Api/Middleware/ErrorHandlingMiddleware.cs` (deps: T004)
