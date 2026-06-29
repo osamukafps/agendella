@@ -13,6 +13,7 @@ import type { WeekDay } from './agenda-utils';
       <div class="week-strip">
         @for (day of weekDays; track day.date) {
           <button
+            type="button"
             class="week-day"
             [class.week-day--active]="selectedDate() === day.date"
             [class.week-day--today]="day.isToday"
@@ -40,6 +41,7 @@ import type { WeekDay } from './agenda-utils';
         <div class="slots-grid" role="group" [attr.aria-label]="'Horários disponíveis para ' + selectedDate()">
           @for (slot of slots(); track slot.startAtUtc) {
             <button
+              type="button"
               class="slot-btn"
               [class.slot-btn--selected]="isSelected(slot)"
               (click)="selectSlot(slot)"
