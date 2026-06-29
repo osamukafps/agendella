@@ -54,6 +54,6 @@ public class AgendellaDbContext(DbContextOptions<AgendellaDbContext> options, IT
         where TEntity : class, ITenantEntity
     {
         modelBuilder.Entity<TEntity>()
-            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+            .HasQueryFilter(entity => CurrentTenantId != null && entity.TenantId == CurrentTenantId);
     }
 }

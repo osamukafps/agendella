@@ -35,6 +35,7 @@ dotnet ef migrations list --project backend/Agendella.Infrastructure --startup-p
 - Development database: `agendella_dev`
 - Connection string source: `backend/Agendella.Api/appsettings.Development.json`
 - Integration test override env var: `AGENDLLA_TEST_POSTGRES`
+- Senha seed da administradora piloto: `AGENDLLA_PILOT_ADMIN_PASSWORD`
 
 ## Tenant Isolation Notes
 
