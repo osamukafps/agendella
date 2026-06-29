@@ -7,12 +7,15 @@ import { authGuard, adminGuard, loginGuard } from './core/auth/auth.guard';
 class PlaceholderPage {}
 
 export const routes: Routes = [
+  // ─── Login ────────────────────────────────────────────────────────────────
   {
     path: 'login',
     canActivate: [loginGuard],
     loadComponent: () =>
       import('./features/auth/login-page.component').then(m => m.LoginPageComponent),
   },
+
+  // ─── Shell autenticado ────────────────────────────────────────────────────
   {
     path: '',
     component: AppShellComponent,
@@ -20,10 +23,19 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'agenda', pathMatch: 'full' },
 
-      // ─── Agenda (Fase 10) ───────────────────────────────────────────────
-      { path: 'agenda', component: PlaceholderPage },
+      // ── Agenda — Fase 10 ────────────────────────────────────────────────
+      {
+        path: 'agenda',
+        loadComponent: () =>
+          import('./features/agenda/agenda-page.component').then(m => m.AgendaPageComponent),
+      },
+      {
+        path: 'minha-agenda',
+        loadComponent: () =>
+          import('./features/agenda/my-agenda-page.component').then(m => m.MyAgendaPageComponent),
+      },
 
-      // ─── Cadastros do tenant (Fase 9) ──────────────────────────────────
+      // ── Cadastros — Fase 9 ───────────────────────────────────────────────
       {
         path: 'salon',
         canActivate: [adminGuard],
@@ -52,7 +64,7 @@ export const routes: Routes = [
             .then(m => m.ClientsPageComponent),
       },
 
-      // ─── Minha disponibilidade (US2 — T134) ────────────────────────────
+      // ── Disponibilidade própria (US2) ────────────────────────────────────
       {
         path: 'minha-disponibilidade',
         loadComponent: () =>
@@ -60,11 +72,11 @@ export const routes: Routes = [
             .then(m => m.MyAvailabilityPageComponent),
       },
 
-      // ─── Bloqueios e ausências (Fase 11) ───────────────────────────────
+      // ── Fase 11 (placeholders) ────────────────────────────────────────────
       { path: 'bloqueios', component: PlaceholderPage, canActivate: [adminGuard] },
       { path: 'ausencias', component: PlaceholderPage },
 
-      // ─── Perfil ────────────────────────────────────────────────────────
+      // ── Perfil ────────────────────────────────────────────────────────────
       { path: 'perfil', component: PlaceholderPage },
     ],
   },

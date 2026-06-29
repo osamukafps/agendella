@@ -261,17 +261,17 @@
 
 **Independent Test Criteria**: Administradora and profissional complete booking, remarcation, cancellation, complete/no-show, and review-resolution flows within mobile-first UI constraints and see clear conflict errors.
 
-- [ ] T136 [P] [US1] Add Vitest tests for agenda data service and cursor pagination in `frontend/src/app/features/agenda/agenda-api.service.spec.ts` (deps: T006, T124)
-- [ ] T137 [P] [US1] Add Vitest tests for availability search and conflict error rendering in `frontend/src/app/features/agenda/availability-picker.component.spec.ts` (deps: T006, T124)
-- [ ] T138 [P] [US1] Add Vitest tests for appointment create/reschedule/cancel forms in `frontend/src/app/features/agenda/appointment-form.component.spec.ts` (deps: T006, T124)
-- [ ] T139 [P] [US3] Add Vitest tests for complete/no-show/review resolution actions in `frontend/src/app/features/agenda/appointment-actions.component.spec.ts` (deps: T006, T124)
-- [ ] T140 [US1] Implement agenda API client for appointments and availability in `frontend/src/app/features/agenda/agenda-api.service.ts` (deps: T136, T122)
-- [ ] T141 [US1] Implement responsive agenda day/week/professional view in `frontend/src/app/features/agenda/agenda-page.component.ts`, `frontend/src/app/features/agenda/agenda-page.component.html`, and `frontend/src/app/features/agenda/agenda-page.component.css` (deps: T140, T137)
-- [ ] T142 [US3] Implement availability picker with no-slot state and structured conflict display in `frontend/src/app/features/agenda/availability-picker.component.ts` and `frontend/src/app/features/agenda/availability-picker.component.html` (deps: T137, T140)
-- [ ] T143 [US1] Implement appointment create/reschedule/cancel form in `frontend/src/app/features/agenda/appointment-form.component.ts` and `frontend/src/app/features/agenda/appointment-form.component.html` (deps: T138, T142)
-- [ ] T144 [US3] Implement complete, no-show, and resolve-review actions in `frontend/src/app/features/agenda/appointment-actions.component.ts` and `frontend/src/app/features/agenda/appointment-actions.component.html` (deps: T139, T140)
-- [ ] T145 [US2] Implement professional own-agenda route filtering and permissions in `frontend/src/app/features/agenda/my-agenda-page.component.ts` and `frontend/src/app/app.routes.ts` (deps: T141, T123)
-- [ ] T146 [US1] Wire agenda routes into shell navigation in `frontend/src/app/app.routes.ts` and `frontend/src/app/core/layout/app-shell.component.ts` (deps: T141, T143, T144, T145)
+- [X] T136 [P] [US1] Add Vitest tests for agenda data service and cursor pagination in `frontend/src/app/features/agenda/agenda-api.service.spec.ts` (deps: T006, T124)
+- [X] T137 [P] [US1] Add Vitest tests for availability search and conflict error rendering in `frontend/src/app/features/agenda/availability-picker.component.spec.ts` (deps: T006, T124)
+- [X] T138 [P] [US1] Add Vitest tests for appointment create/reschedule/cancel forms in `frontend/src/app/features/agenda/appointment-form.component.spec.ts` (deps: T006, T124)
+- [X] T139 [P] [US3] Add Vitest tests for complete/no-show/review resolution actions in `frontend/src/app/features/agenda/appointment-actions.component.spec.ts` (deps: T006, T124)
+- [X] T140 [US1] Implement agenda API client for appointments and availability in `frontend/src/app/features/agenda/agenda-api.service.ts` (deps: T136, T122)
+- [X] T141 [US1] Implement responsive agenda day/week/professional view in `frontend/src/app/features/agenda/agenda-page.component.ts`, `frontend/src/app/features/agenda/agenda-page.component.html`, and `frontend/src/app/features/agenda/agenda-page.component.css` (deps: T140, T137)
+- [X] T142 [US3] Implement availability picker with no-slot state and structured conflict display in `frontend/src/app/features/agenda/availability-picker.component.ts` and `frontend/src/app/features/agenda/availability-picker.component.html` (deps: T137, T140)
+- [X] T143 [US1] Implement appointment create/reschedule/cancel form in `frontend/src/app/features/agenda/appointment-form.component.ts` and `frontend/src/app/features/agenda/appointment-form.component.html` (deps: T138, T142)
+- [X] T144 [US3] Implement complete, no-show, and resolve-review actions in `frontend/src/app/features/agenda/appointment-actions.component.ts` and `frontend/src/app/features/agenda/appointment-actions.component.html` (deps: T139, T140)
+- [X] T145 [US2] Implement professional own-agenda route filtering and permissions in `frontend/src/app/features/agenda/my-agenda-page.component.ts` and `frontend/src/app/app.routes.ts` (deps: T141, T123)
+- [X] T146 [US1] Wire agenda routes into shell navigation in `frontend/src/app/app.routes.ts` and `frontend/src/app/core/layout/app-shell.component.ts` (deps: T141, T143, T144, T145)
 
 **Checkpoint**: Agenda and booking flows are available in the SPA for all MVP roles.
 

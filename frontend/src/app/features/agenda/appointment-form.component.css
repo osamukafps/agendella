@@ -1,0 +1,15 @@
+@import '../../../styles/page.css';
+
+.form-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.btn-close {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border: none; background: var(--color-neutral-100); border-radius: var(--radius-sm);
+  cursor: pointer; color: var(--color-text-secondary);
+}
+.picker-hint {
+  font-size: var(--text-sm); color: var(--color-text-tertiary);
+  text-align: center; padding: var(--space-4) 0;
+}

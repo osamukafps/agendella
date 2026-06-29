@@ -1,0 +1,87 @@
+<div class="form-card">
+  <div class="form-header">
+    <h3 class="form-title">
+      {{ mode === 'create' ? 'Novo agendamento' : 'Reagendar' }}
+    </h3>
+    <button class="btn-close" (click)="cancelled.emit()" aria-label="Fechar">✕</button>
+  </div>
+
+  @if (error()) {
+    <div class="state-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (isLoading()) {
+    <div class="state-loading">Carregando…</div>
+  } @else {
+
+    <form (submit)="submit($event)" novalidate>
+      @if (mode === 'create') {
+        <!-- Profissional -->
+        <div class="field">
+          <label class="field-label" for="af-prof">Profissional</label>
+          <select id="af-prof" class="field-input"
+            [value]="selectedProfId()"
+            (change)="selectedProfId.set($any($event.target).value); selectedSlot.set(null)">
+            <option value="">Selecione…</option>
+            @for (p of professionals(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Cliente -->
+        <div class="field">
+          <label class="field-label" for="af-cli">Cliente</label>
+          <select id="af-cli" class="field-input"
+            [value]="selectedClientId()"
+            (change)="selectedClientId.set($any($event.target).value)">
+            <option value="">Selecione…</option>
+            @for (c of clients(); track c.id) {
+              <option [value]="c.id">{{ c.name }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Serviço -->
+        <div class="field">
+          <label class="field-label" for="af-svc">Serviço</label>
+          <select id="af-svc" class="field-input"
+            [value]="selectedSvcId()"
+            (change)="selectedSvcId.set($any($event.target).value); selectedSlot.set(null)">
+            <option value="">Selecione…</option>
+            @for (s of services(); track s.id) {
+              <option [value]="s.id">{{ s.name }} ({{ s.durationMinutes }} min)</option>
+            }
+          </select>
+        </div>
+      }
+
+      <!-- Picker de disponibilidade (ativo quando profissional + duração definidos) -->
+      @if (activeProfessionalId() && durationMinutes() > 0) {
+        <div class="field">
+          <label class="field-label">Data e horário</label>
+          <app-availability-picker
+            [professionalId]="activeProfessionalId()"
+            [durationMinutes]="durationMinutes()"
+            (slotSelected)="onSlotSelected($event)"
+          />
+        </div>
+      } @else if (mode === 'create') {
+        <p class="picker-hint">Selecione profissional e serviço para ver horários disponíveis.</p>
+      }
+
+      <div class="form-actions">
+        <button type="button" class="btn-ghost" (click)="cancelled.emit()">Cancelar</button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="!canSubmit() || isSaving()"
+          [attr.aria-busy]="isSaving()"
+        >
+          {{ isSaving() ? 'Salvando…' : (mode === 'create' ? 'Agendar' : 'Reagendar') }}
+        </button>
+      </div>
+    </form>
+
+  }
+</div>
