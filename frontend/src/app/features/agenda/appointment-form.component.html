@@ -40,7 +40,49 @@
               <option [value]="c.id">{{ c.name }}</option>
             }
           </select>
+          @if (!showNewClient()) {
+            <button type="button" class="btn-inline-link" (click)="openNewClient()">
+              + Cadastrar nova cliente
+            </button>
+          }
         </div>
+
+        <!-- Cadastro inline de nova cliente -->
+        @if (showNewClient()) {
+          <div class="inline-form">
+            <h4 class="inline-form__title">Nova cliente</h4>
+            @if (newClientError()) {
+              <div class="state-error" role="alert">{{ newClientError() }}</div>
+            }
+            <form (submit)="saveNewClient($event)" novalidate>
+              <div class="field">
+                <label class="field-label" for="nc-name">Nome *</label>
+                <input id="nc-name" class="field-input" type="text" required
+                  [value]="newClientName()"
+                  (input)="newClientName.set($any($event.target).value)">
+              </div>
+              <div class="field">
+                <label class="field-label" for="nc-phone">Telefone *</label>
+                <input id="nc-phone" class="field-input" type="tel" required
+                  placeholder="(00) 00000-0000"
+                  [value]="newClientPhone()"
+                  (input)="newClientPhone.set($any($event.target).value)">
+              </div>
+              <div class="field">
+                <label class="field-label" for="nc-email">E-mail</label>
+                <input id="nc-email" class="field-input" type="email"
+                  [value]="newClientEmail()"
+                  (input)="newClientEmail.set($any($event.target).value)">
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn-ghost" (click)="cancelNewClient()">Cancelar</button>
+                <button type="submit" class="btn-primary" [disabled]="newClientSaving()">
+                  {{ newClientSaving() ? 'Salvando…' : 'Cadastrar' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        }
 
         <!-- Serviço -->
         <div class="field">

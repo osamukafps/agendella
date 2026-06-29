@@ -9,6 +9,15 @@ export const DAYS_PT: Record<string, string> = {
 
 const DAY_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
+function defaultBusinessHours(): BusinessHourDto[] {
+  return DAY_ORDER.map((day, i) => ({
+    dayOfWeek: day,
+    isClosed: i >= 5,
+    startLocalTime: '09:00',
+    endLocalTime: '18:00',
+  }));
+}
+
 export function sortBusinessHours(hours: BusinessHourDto[]): BusinessHourDto[] {
   return [...hours].sort((a, b) => DAY_ORDER.indexOf(a.dayOfWeek) - DAY_ORDER.indexOf(b.dayOfWeek));
 }
@@ -46,7 +55,7 @@ export class SalonSettingsPageComponent implements OnInit {
         this.api.getBusinessHours(),
       ]);
       this.settings.set(s);
-      this.hours.set(sortBusinessHours(h));
+      this.hours.set(h.length > 0 ? sortBusinessHours(h) : defaultBusinessHours());
       this.formName.set(s.name);
       this.formAddress.set(s.address);
       this.formPhone.set(s.phone);

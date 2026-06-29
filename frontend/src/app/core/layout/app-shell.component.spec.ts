@@ -10,8 +10,8 @@ import type { CollaboratorRole } from '../auth/auth.models';
 // A integração completa é verificada em testes E2E / browser.
 
 describe('getNavItemsForRole()', () => {
-  it('retorna 4 itens para administradora (Agenda, Clientes, Serviços, Perfil)', () => {
-    expect(getNavItemsForRole('administradora')).toHaveLength(4);
+  it('retorna 5 itens para administradora (Agenda, Clientes, Serviços, Equipe, Bloqueios)', () => {
+    expect(getNavItemsForRole('administradora')).toHaveLength(5);
   });
 
   it('retorna Agenda para administradora', () => {
@@ -29,12 +29,22 @@ describe('getNavItemsForRole()', () => {
     expect(items.find(i => i.id === 'servicos')).toBeDefined();
   });
 
-  it('retorna Perfil para administradora', () => {
+  it('retorna Equipe (profissionais) para administradora', () => {
     const items = getNavItemsForRole('administradora');
-    expect(items.find(i => i.id === 'perfil')).toBeDefined();
+    expect(items.find(i => i.id === 'profissionais')).toBeDefined();
   });
 
-  it('retorna 4 itens para profissional (Agenda, Clientes, Disponibilidade, Perfil)', () => {
+  it('retorna Bloqueios para administradora', () => {
+    const items = getNavItemsForRole('administradora');
+    expect(items.find(i => i.id === 'bloqueios')).toBeDefined();
+  });
+
+  it('não inclui Ausências para administradora', () => {
+    const items = getNavItemsForRole('administradora');
+    expect(items.find(i => i.id === 'ausencias')).toBeUndefined();
+  });
+
+  it('retorna 4 itens para profissional (Agenda, Clientes, Disponibilidade, Ausências)', () => {
     expect(getNavItemsForRole('profissional')).toHaveLength(4);
   });
 
@@ -43,9 +53,24 @@ describe('getNavItemsForRole()', () => {
     expect(items.find(i => i.id === 'servicos')).toBeUndefined();
   });
 
+  it('não inclui Bloqueios para profissional', () => {
+    const items = getNavItemsForRole('profissional');
+    expect(items.find(i => i.id === 'bloqueios')).toBeUndefined();
+  });
+
+  it('não inclui Profissionais para profissional', () => {
+    const items = getNavItemsForRole('profissional');
+    expect(items.find(i => i.id === 'profissionais')).toBeUndefined();
+  });
+
   it('inclui Disponibilidade para profissional', () => {
     const items = getNavItemsForRole('profissional');
     expect(items.find(i => i.id === 'disponibilidade')).toBeDefined();
+  });
+
+  it('inclui Ausências para profissional', () => {
+    const items = getNavItemsForRole('profissional');
+    expect(items.find(i => i.id === 'ausencias')).toBeDefined();
   });
 
   it('inclui Agenda para profissional', () => {
@@ -56,11 +81,6 @@ describe('getNavItemsForRole()', () => {
   it('inclui Clientes para profissional', () => {
     const items = getNavItemsForRole('profissional');
     expect(items.find(i => i.id === 'clientes')).toBeDefined();
-  });
-
-  it('inclui Perfil para profissional', () => {
-    const items = getNavItemsForRole('profissional');
-    expect(items.find(i => i.id === 'perfil')).toBeDefined();
   });
 
   it('retorna lista vazia quando role é null', () => {
@@ -86,8 +106,8 @@ describe('getNavItemsForRole()', () => {
 // ─── ALL_NAV_ITEMS ────────────────────────────────────────────────────────────
 
 describe('ALL_NAV_ITEMS', () => {
-  it('tem exatamente 5 itens de navegação (inclui disponibilidade p/ profissional)', () => {
-    expect(ALL_NAV_ITEMS).toHaveLength(5);
+  it('tem exatamente 7 itens de navegação', () => {
+    expect(ALL_NAV_ITEMS).toHaveLength(7);
   });
 
   it('nenhum item tem roles vazio', () => {
@@ -101,9 +121,24 @@ describe('ALL_NAV_ITEMS', () => {
     expect(servicos?.roles).toEqual(['administradora']);
   });
 
+  it('Profissionais é restrito à administradora', () => {
+    const prof = ALL_NAV_ITEMS.find(i => i.id === 'profissionais');
+    expect(prof?.roles).toEqual(['administradora']);
+  });
+
+  it('Bloqueios é restrito à administradora', () => {
+    const bloqueios = ALL_NAV_ITEMS.find(i => i.id === 'bloqueios');
+    expect(bloqueios?.roles).toEqual(['administradora']);
+  });
+
   it('Disponibilidade é restrito ao profissional', () => {
     const disp = ALL_NAV_ITEMS.find(i => i.id === 'disponibilidade');
     expect(disp?.roles).toEqual(['profissional']);
+  });
+
+  it('Ausências é restrito ao profissional', () => {
+    const ausencias = ALL_NAV_ITEMS.find(i => i.id === 'ausencias');
+    expect(ausencias?.roles).toEqual(['profissional']);
   });
 
   it('Agenda e Clientes são acessíveis a ambos os roles', () => {
@@ -116,8 +151,8 @@ describe('ALL_NAV_ITEMS', () => {
     });
   });
 
-  it('itens têm ordem: Agenda → Clientes → Serviços → Disponibilidade → Perfil', () => {
+  it('itens têm ordem: Agenda → Clientes → Serviços → Equipe → Bloqueios → Disponibilidade → Ausências', () => {
     const ids = ALL_NAV_ITEMS.map(i => i.id);
-    expect(ids).toEqual(['agenda', 'clientes', 'servicos', 'disponibilidade', 'perfil']);
+    expect(ids).toEqual(['agenda', 'clientes', 'servicos', 'profissionais', 'bloqueios', 'disponibilidade', 'ausencias']);
   });
 });

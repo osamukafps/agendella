@@ -9,8 +9,10 @@ export interface MeResponse {
   collaboratorId: string;
   tenantId: string;
   professionalId: string | null;
+  displayName: string;
   role: CollaboratorRole;
   status: 'active' | 'inactive';
+  salonName: string;
 }
 
 export interface LoginRequest {

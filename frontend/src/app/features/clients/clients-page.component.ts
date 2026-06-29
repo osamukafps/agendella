@@ -1,13 +1,18 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { ClientsApiService, ClientPhoneDuplicateError } from './clients-api.service';
+import { applyPhoneMask, digitsOnly, formatStoredPhone } from '../../core/utils/phone';
 import type { ClientResponse, CreateClientRequest } from '../../core/api/api.models';
+
+export { formatStoredPhone };
 
 const EMPTY_FORM: CreateClientRequest = { name: '', phone: '', email: '', notes: '' };
 
 @Component({
   selector: 'app-clients-page',
   standalone: true,
+  imports: [RouterLink],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.css',
 })
@@ -47,7 +52,7 @@ export class ClientsPageComponent implements OnInit {
   }
 
   openEdit(item: ClientResponse): void {
-    this.form.set({ name: item.name, phone: item.phone, email: item.email, notes: item.notes });
+    this.form.set({ name: item.name, phone: formatStoredPhone(item.phone), email: item.email, notes: item.notes });
     this.editingId.set(item.id);
     this.formMode.set('edit');
     this.phoneError.set(null);
@@ -56,7 +61,8 @@ export class ClientsPageComponent implements OnInit {
   closeForm(): void { this.formMode.set(null); this.error.set(null); this.phoneError.set(null); }
 
   setField<K extends keyof CreateClientRequest>(key: K, value: string): void {
-    this.form.update(f => ({ ...f, [key]: value }));
+    const processed = key === 'phone' ? applyPhoneMask(value) : value;
+    this.form.update(f => ({ ...f, [key]: processed }));
     if (key === 'phone') this.phoneError.set(null);
   }
 
@@ -66,11 +72,12 @@ export class ClientsPageComponent implements OnInit {
     this.error.set(null);
     this.phoneError.set(null);
     try {
+      const payload = { ...this.form(), phone: digitsOnly(this.form().phone) };
       if (this.formMode() === 'edit' && this.editingId()) {
-        const updated = await this.api.update(this.editingId()!, this.form());
+        const updated = await this.api.update(this.editingId()!, payload);
         this.items.update(items => items.map(i => i.id === updated.id ? updated : i));
       } else {
-        const created = await this.api.create(this.form());
+        const created = await this.api.create(payload);
         this.items.update(items => [created, ...items]);
       }
       this.closeForm();

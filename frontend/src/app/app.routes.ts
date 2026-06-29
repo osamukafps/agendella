@@ -1,10 +1,6 @@
-import { Component } from '@angular/core';
 import { Routes } from '@angular/router';
 import { AppShellComponent } from './core/layout/app-shell.component';
 import { authGuard, adminGuard, loginGuard } from './core/auth/auth.guard';
-
-@Component({ standalone: true, template: '' })
-class PlaceholderPage {}
 
 export const routes: Routes = [
   // ─── Login ────────────────────────────────────────────────────────────────
@@ -64,6 +60,14 @@ export const routes: Routes = [
             .then(m => m.ClientsPageComponent),
       },
 
+      // ── Histórico do cliente — Fase 11 ───────────────────────────────────
+      {
+        path: 'clientes/:clientId/historico',
+        loadComponent: () =>
+          import('./features/clients/client-history-page.component')
+            .then(m => m.ClientHistoryPageComponent),
+      },
+
       // ── Disponibilidade própria (US2) ────────────────────────────────────
       {
         path: 'minha-disponibilidade',
@@ -72,12 +76,30 @@ export const routes: Routes = [
             .then(m => m.MyAvailabilityPageComponent),
       },
 
-      // ── Fase 11 (placeholders) ────────────────────────────────────────────
-      { path: 'bloqueios', component: PlaceholderPage, canActivate: [adminGuard] },
-      { path: 'ausencias', component: PlaceholderPage },
+      // ── Bloqueios do salão — Fase 11 (US1) ──────────────────────────────
+      {
+        path: 'bloqueios',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/blocks/salon-blocks-page.component')
+            .then(m => m.SalonBlocksPageComponent),
+      },
 
-      // ── Perfil ────────────────────────────────────────────────────────────
-      { path: 'perfil', component: PlaceholderPage },
+      // ── Ausências da profissional — Fase 11 (US2) ───────────────────────
+      {
+        path: 'ausencias',
+        loadComponent: () =>
+          import('./features/absences/professional-absences-page.component')
+            .then(m => m.ProfessionalAbsencesPageComponent),
+      },
+
+      // ── Meu perfil ────────────────────────────────────────────────────────
+      {
+        path: 'me',
+        loadComponent: () =>
+          import('./features/me/me-page.component').then(m => m.MePageComponent),
+      },
+      { path: 'perfil', redirectTo: '' },
     ],
   },
 

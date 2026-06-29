@@ -52,9 +52,11 @@
         <li class="item-card" [class.item-card--inactive]="item.status === 'Inactive'">
           <div class="item-info">
             <span class="item-name">{{ item.name }}</span>
-            <span class="item-meta">{{ item.phone }}</span>
+            <span class="item-meta">{{ formatStoredPhone(item.phone) }}</span>
           </div>
           <div class="item-actions">
+            <a class="btn-icon" [routerLink]="['/clientes', item.id, 'historico']"
+              [attr.aria-label]="'Ver histórico de ' + item.name">☰</a>
             <button class="btn-icon" (click)="openEdit(item)" [attr.aria-label]="'Editar ' + item.name">✎</button>
             @if (item.status === 'Active' && auth.role() === 'administradora') {
               <button class="btn-icon btn-icon--danger" (click)="deactivate(item)"

@@ -21,7 +21,8 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, JwtSigningKeyP
             new(JwtRegisteredClaimNames.Email, collaborator.Email),
             new("tenant_id", collaborator.TenantId.ToString()),
             new("role", ToRoleValue(collaborator.Role)),
-            new("token_version", collaborator.TokenVersion.ToString())
+            new("token_version", collaborator.TokenVersion.ToString()),
+            new("display_name", collaborator.DisplayName)
         };
 
         if (collaborator.ProfessionalId.HasValue)

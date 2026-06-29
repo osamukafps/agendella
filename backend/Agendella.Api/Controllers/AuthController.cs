@@ -5,6 +5,7 @@ using Agendella.Api.Contracts.Auth;
 using Agendella.Api.Contracts.Common;
 using Agendella.Application.Auth;
 using Agendella.Application.Common.Errors;
+using Agendella.Application.Salons;
 using Agendella.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,8 @@ public sealed class AuthController(
     CredentialService credentialService,
     RefreshTokenService refreshTokenService,
     JwtTokenService jwtTokenService,
-    RefreshCookieWriter refreshCookieWriter) : ControllerBase
+    RefreshCookieWriter refreshCookieWriter,
+    ISalonStore salonStore) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("login")]
@@ -80,15 +82,40 @@ public sealed class AuthController(
     [Authorize]
     [HttpGet("/me")]
     [ProducesResponseType<MeResponse>(StatusCodes.Status200OK)]
-    public ActionResult<MeResponse> Me()
+    public async Task<ActionResult<MeResponse>> Me(CancellationToken cancellationToken)
     {
-        var collaboratorId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
-        var tenantId = Guid.Parse(User.FindFirstValue("tenant_id")!);
+        var collaboratorId = ParseGuidClaim(JwtRegisteredClaimNames.Sub, ClaimTypes.NameIdentifier);
+        var tenantId = ParseGuidClaim("tenant_id", "tenantId", "tenant");
         Guid? professionalId = User.FindFirstValue("professional_id") is { } rawProfessionalId
             ? Guid.Parse(rawProfessionalId)
             : null;
         var role = User.FindFirstValue("role") ?? string.Empty;
+        var displayName = User.FindFirstValue("display_name") ?? string.Empty;
 
-        return Ok(new MeResponse(collaboratorId, tenantId, professionalId, role, "active"));
+        var salon = await salonStore.FindByIdAsync(tenantId, cancellationToken);
+        var salonName = salon?.Name ?? string.Empty;
+
+        return Ok(new MeResponse(collaboratorId, tenantId, professionalId, displayName, role, "active", salonName));
+    }
+
+    private Guid ParseGuidClaim(params string[] claimTypes)
+    {
+        var rawValue = claimTypes
+            .Select(type => User.FindFirstValue(type))
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+
+        if (!Guid.TryParse(rawValue, out var value))
+        {
+            throw new ApplicationRuleException(new ApplicationError(
+                ErrorCodes.Unauthorized,
+                "A identidade autenticada nao contem os claims obrigatorios para esta operacao.",
+                StatusCodes.Status401Unauthorized,
+                new Dictionary<string, object?>
+                {
+                    ["claims"] = claimTypes
+                }));
+        }
+
+        return value;
     }
 }
