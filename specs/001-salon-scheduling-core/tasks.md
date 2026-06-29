@@ -283,15 +283,15 @@
 
 **Independent Test Criteria**: Administradora sees tenant client history, profissional sees only own related history, blocks/absences can be managed by allowed roles, and affected appointments show review status.
 
-- [ ] T147 [P] [US3] Add Vitest tests for client history scoping UI states in `frontend/src/app/features/clients/client-history-page.component.spec.ts` (deps: T006, T124)
-- [ ] T148 [P] [US1] Add Vitest tests for salon block list/create/delete UI in `frontend/src/app/features/blocks/salon-blocks-page.component.spec.ts` (deps: T006, T124)
-- [ ] T149 [P] [US2] Add Vitest tests for professional absence list/create/cancel UI in `frontend/src/app/features/absences/professional-absences-page.component.spec.ts` (deps: T006, T124)
-- [ ] T150 [P] [US1] Add Vitest tests for visible `requiresReview` badge and review reason in agenda cards in `frontend/src/app/features/agenda/appointment-card.component.spec.ts` (deps: T006, T141)
-- [ ] T151 [US3] Implement client history API and page in `frontend/src/app/features/clients/client-history-api.service.ts`, `frontend/src/app/features/clients/client-history-page.component.ts`, and `frontend/src/app/features/clients/client-history-page.component.html` (deps: T147, T133)
-- [ ] T152 [US1] Implement salon blocks API and page in `frontend/src/app/features/blocks/salon-blocks-api.service.ts`, `frontend/src/app/features/blocks/salon-blocks-page.component.ts`, and `frontend/src/app/features/blocks/salon-blocks-page.component.html` (deps: T148, T122)
-- [ ] T153 [US2] Implement professional absences API and page in `frontend/src/app/features/absences/professional-absences-api.service.ts`, `frontend/src/app/features/absences/professional-absences-page.component.ts`, and `frontend/src/app/features/absences/professional-absences-page.component.html` (deps: T149, T122)
-- [ ] T154 [US1] Implement appointment card review badge and reason display in `frontend/src/app/features/agenda/appointment-card.component.ts` and `frontend/src/app/features/agenda/appointment-card.component.html` (deps: T150, T141)
-- [ ] T155 [US1] Wire client history, blocks, absences, and review routes into navigation in `frontend/src/app/app.routes.ts` and `frontend/src/app/core/layout/app-shell.component.ts` (deps: T151, T152, T153, T154)
+- [X] T147 [P] [US3] Add Vitest tests for client history scoping UI states in `frontend/src/app/features/clients/client-history-page.component.spec.ts` (deps: T006, T124)
+- [X] T148 [P] [US1] Add Vitest tests for salon block list/create/delete UI in `frontend/src/app/features/blocks/salon-blocks-page.component.spec.ts` (deps: T006, T124)
+- [X] T149 [P] [US2] Add Vitest tests for professional absence list/create/cancel UI in `frontend/src/app/features/absences/professional-absences-page.component.spec.ts` (deps: T006, T124)
+- [X] T150 [P] [US1] Add Vitest tests for visible `requiresReview` badge and review reason in agenda cards in `frontend/src/app/features/agenda/appointment-card.component.spec.ts` (deps: T006, T141)
+- [X] T151 [US3] Implement client history API and page in `frontend/src/app/features/clients/client-history-api.service.ts`, `frontend/src/app/features/clients/client-history-page.component.ts`, and `frontend/src/app/features/clients/client-history-page.component.html` (deps: T147, T133)
+- [X] T152 [US1] Implement salon blocks API and page in `frontend/src/app/features/blocks/salon-blocks-api.service.ts`, `frontend/src/app/features/blocks/salon-blocks-page.component.ts`, and `frontend/src/app/features/blocks/salon-blocks-page.component.html` (deps: T148, T122)
+- [X] T153 [US2] Implement professional absences API and page in `frontend/src/app/features/absences/professional-absences-api.service.ts`, `frontend/src/app/features/absences/professional-absences-page.component.ts`, and `frontend/src/app/features/absences/professional-absences-page.component.html` (deps: T149, T122)
+- [X] T154 [US1] Implement appointment card review badge and reason display in `frontend/src/app/features/agenda/appointment-card.component.ts` and `frontend/src/app/features/agenda/appointment-card.component.html` (deps: T150, T141)
+- [X] T155 [US1] Wire client history, blocks, absences, and review routes into navigation in `frontend/src/app/app.routes.ts` and `frontend/src/app/core/layout/app-shell.component.ts` (deps: T151, T152, T153, T154)
 
 **Checkpoint**: Client history, blocks, absences, and review visibility are represented in the SPA.
 

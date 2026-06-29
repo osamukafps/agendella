@@ -1,0 +1,63 @@
+<div class="page-layout">
+  <header class="page-header">
+    <h2 class="page-title">Bloqueios do Salão</h2>
+    <button class="btn-add" (click)="openCreate()" aria-label="Novo bloqueio">+ Novo</button>
+  </header>
+
+  @if (error()) { <div class="state-error" role="alert">{{ error() }}</div> }
+
+  @if (showForm()) {
+    <div class="form-card">
+      <h3 class="form-title">Novo bloqueio</h3>
+      <form (submit)="save($event)" novalidate>
+        <div class="field">
+          <label class="field-label" for="blk-start">Início</label>
+          <input id="blk-start" class="field-input" type="datetime-local" required
+            [value]="toLocalInputValue(form().startAtUtc)"
+            (change)="setField('startAtUtc', toUtcFromInput($any($event.target).value))">
+        </div>
+        <div class="field">
+          <label class="field-label" for="blk-end">Fim</label>
+          <input id="blk-end" class="field-input" type="datetime-local" required
+            [value]="toLocalInputValue(form().endAtUtc)"
+            (change)="setField('endAtUtc', toUtcFromInput($any($event.target).value))">
+        </div>
+        <div class="field">
+          <label class="field-label" for="blk-reason">Motivo</label>
+          <input id="blk-reason" class="field-input" type="text" required maxlength="200"
+            [value]="form().reason"
+            (input)="setField('reason', $any($event.target).value)">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-ghost" (click)="closeForm()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="isSaving()">
+            {{ isSaving() ? 'Salvando…' : 'Criar bloqueio' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="state-loading">Carregando bloqueios…</div>
+  } @else {
+    <ul class="items-list" role="list" aria-label="Bloqueios do salão">
+      @for (block of items(); track block.id) {
+        <li class="item-card">
+          <div class="item-info">
+            <span class="item-name">{{ block.reason }}</span>
+            <span class="item-meta">
+              {{ formatDateTime(block.startAtUtc) }} – {{ formatDateTime(block.endAtUtc) }}
+            </span>
+          </div>
+          <div class="item-actions">
+            <button class="btn-icon btn-icon--danger" (click)="delete(block)"
+              [attr.aria-label]="'Remover bloqueio: ' + block.reason">✕</button>
+          </div>
+        </li>
+      } @empty {
+        <li class="state-empty">Nenhum bloqueio cadastrado.</li>
+      }
+    </ul>
+  }
+</div>

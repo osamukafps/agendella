@@ -1,99 +1,52 @@
-<!-- ─── Seletor semanal ─── -->
-<div class="day-strip" role="tablist" aria-label="Selecione o dia">
-  @for (day of weekDays; track day.date) {
-    <button
-      role="tab"
-      class="day-btn"
-      [class.day-btn--active]="selectedDate() === day.date"
-      [class.day-btn--today]="day.isToday"
-      (click)="selectDay(day.date)"
-      [attr.aria-selected]="selectedDate() === day.date"
-    >
-      <span class="day-abbr">{{ day.abbr }}</span>
-      <span class="day-num">{{ day.num }}</span>
-    </button>
-  }
-</div>
+<section class="daily-agenda" aria-labelledby="agenda-title">
+  <header class="daily-agenda__header">
+    <p class="daily-agenda__kicker">Agenda diária</p>
+    <div class="daily-agenda__title-row">
+      <h1 id="agenda-title">{{ dayLabel }}</h1>
+      <span>{{ salonName }}</span>
+    </div>
+  </header>
 
-<!-- ─── Formulário de agendamento ─── -->
-@if (formMode()) {
-  <div class="form-overlay">
-    <app-appointment-form
-      [mode]="formMode()!"
-      [appointmentId]="reschedulingAppt()?.id"
-      [currentProfessionalId]="reschedulingAppt()?.professionalId"
-      (saved)="onSaved($event)"
-      (cancelled)="closeForm()"
-    />
-  </div>
-}
+  <ol
+    class="timeline"
+    aria-label="Timeline de agendamentos de segunda-feira, 29 de junho de 2026"
+  >
+    @for (slot of timeSlots; track slot.time) {
+      <li class="timeline__slot" [style.grid-row]="slot.gridRow">
+        @if (slot.label) {
+          <time class="timeline__time" [attr.datetime]="slot.time">{{ slot.label }}</time>
+        }
+      </li>
+    }
 
-<!-- ─── Conteúdo da agenda ─── -->
-<div class="agenda-content" role="tabpanel" [attr.aria-label]="'Agenda de ' + selectedDate()">
+    <li class="timeline__now" [style.--now-top]="nowLineTop" aria-hidden="true">
+      <span>Agora</span>
+    </li>
 
-  @if (error()) { <div class="state-error" role="alert">{{ error() }}</div> }
+    @for (appointment of appointments; track appointment.id) {
+      <li class="timeline__appointment" [style.grid-row]="appointment.gridRow">
+        <article
+          class="appointment-card"
+          [class.appointment-card--active]="appointment.statusTone === 'active'"
+          [class.appointment-card--completed]="appointment.statusTone === 'completed'"
+          [class.appointment-card--review]="appointment.statusTone === 'review'"
+          [style.--status-color]="appointment.statusColor"
+          [attr.aria-label]="appointment.startTime + ', ' + appointment.clientName + ', ' + appointment.statusLabel"
+        >
+          <div class="appointment-card__meta">
+            <time [attr.datetime]="appointment.startTime">
+              {{ appointment.startTime }}-{{ appointment.endTime }}
+            </time>
+            <span class="appointment-card__status">{{ appointment.statusLabel }}</span>
+          </div>
 
-  @if (isLoading()) {
-    <div class="state-loading">Carregando agenda…</div>
-  } @else {
-
-    <ol class="timeline" aria-label="Agendamentos do dia">
-      @for (appt of appointments(); track appt.id) {
-        <li class="time-slot">
-
-          <!-- Coluna de hora -->
-          <div class="time-label">{{ startTime(appt) }}</div>
-
-          <!-- Card do agendamento -->
-          <article
-            class="appt-card"
-            [class.appt-card--done]="appt.status === 'Completed' || appt.status === 'Cancelled' || appt.status === 'NoShow'"
-            [class.appt-card--review]="appt.requiresReview"
-            (click)="toggleExpand(appt.id)"
-            [attr.aria-expanded]="expandedId() === appt.id"
-            [attr.aria-label]="clientName(appt.clientId) + ', ' + statusLabel(appt)"
-          >
-            <div class="appt-header">
-              <div class="appt-names">
-                <span class="appt-client">{{ clientName(appt.clientId) }}</span>
-                <span class="appt-service">{{ serviceName(appt.serviceId) }} · {{ duration(appt) }}</span>
-                @if (auth.role() === 'administradora') {
-                  <span class="appt-prof">{{ profName(appt.professionalId) }}</span>
-                }
-              </div>
-              <span class="appt-badge" [class]="badgeClass(appt)">{{ statusLabel(appt) }}</span>
-            </div>
-
-            @if (expandedId() === appt.id) {
-              <app-appointment-actions
-                [appt]="appt"
-                (completed)="onComplete(appt)"
-                (noShowed)="onNoShow(appt)"
-                (cancelled)="onCancel(appt)"
-                (rescheduled)="openReschedule(appt)"
-                (reviewResolved)="onResolveReview(appt)"
-              />
-            }
-          </article>
-
-        </li>
-      } @empty {
-        <li class="timeline-empty">
-          Nenhum agendamento para este dia.
-          <button class="link-btn" (click)="openCreate()">Criar agendamento</button>
-        </li>
-      }
-    </ol>
-
-  }
-</div>
-
-<!-- ─── FAB: novo agendamento ─── -->
-@if (!formMode()) {
-  <button class="fab" (click)="openCreate()" aria-label="Novo agendamento">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M12 5v14M5 12h14"/>
-    </svg>
-  </button>
-}
+          <div class="appointment-card__body">
+            <h2>{{ appointment.clientName }}</h2>
+            <p>{{ appointment.serviceName }}</p>
+            <span>{{ appointment.professionalName }}</span>
+          </div>
+        </article>
+      </li>
+    }
+  </ol>
+</section>

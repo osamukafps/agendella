@@ -1,0 +1,25 @@
+<article
+  class="appt-card"
+  [class.appt-card--review]="appt.requiresReview"
+  [class.appt-card--done]="isDone"
+>
+  @if (appt.requiresReview) {
+    <div class="review-banner" role="alert" aria-live="polite">
+      <span class="review-badge">⚠ Requer revisão</span>
+      @if (appt.reviewReason) {
+        <span class="review-reason">{{ appt.reviewReason }}</span>
+      }
+    </div>
+  }
+
+  <div class="appt-header">
+    <div class="appt-names">
+      <span class="appt-client">{{ clientName }}</span>
+      <span class="appt-service">{{ serviceName }}{{ duration ? ' · ' + duration : '' }}</span>
+      @if (showProfessional && professionalName) {
+        <span class="appt-prof">{{ professionalName }}</span>
+      }
+    </div>
+    <span class="appt-badge" [class]="badgeClass">{{ statusLabel }}</span>
+  </div>
+</article>

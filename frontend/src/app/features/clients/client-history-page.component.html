@@ -1,0 +1,41 @@
+<div class="page-layout">
+  <header class="page-header">
+    <div style="display:flex; align-items:center; gap: var(--space-2)">
+      <a routerLink="/clientes" class="btn-ghost" aria-label="Voltar para clientes">← Voltar</a>
+      <h2 class="page-title">
+        @if (client()) { Histórico — {{ client()!.name }} }
+        @else { Histórico do cliente }
+      </h2>
+    </div>
+  </header>
+
+  @if (error()) { <div class="state-error" role="alert">{{ error() }}</div> }
+
+  @if (isLoading()) {
+    <div class="state-loading">Carregando histórico…</div>
+  } @else {
+    <ul class="items-list" role="list" aria-label="Histórico de eventos">
+      @for (evt of events(); track evt.id) {
+        <li class="item-card">
+          <div class="item-info">
+            <span class="item-name">{{ eventLabel(evt.type) }}</span>
+            <span class="item-meta">{{ formatDate(evt.occurredAtUtc) }}</span>
+            @if (evt.description) {
+              <span class="item-meta" style="margin-top: 2px;">{{ evt.description }}</span>
+            }
+          </div>
+        </li>
+      } @empty {
+        <li class="state-empty">Nenhum evento no histórico deste cliente.</li>
+      }
+    </ul>
+
+    @if (nextCursor()) {
+      <div style="text-align: center; padding: var(--space-4)">
+        <button class="btn-ghost" (click)="loadMore()" [disabled]="isLoadingMore()">
+          {{ isLoadingMore() ? 'Carregando…' : 'Carregar mais' }}
+        </button>
+      </div>
+    }
+  }
+</div>

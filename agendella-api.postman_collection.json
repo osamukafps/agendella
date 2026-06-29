@@ -1,0 +1,811 @@
+{
+  "info": {
+    "name": "Agendella API",
+    "description": "Coleção completa da API do Agendella — sistema de agendamento para salões de beleza.\n\n**Autenticação:**\nFaça login via `POST /auth/login`. O access token retornado deve ser colado na variável de ambiente `accessToken`. O refresh token é salvo automaticamente via cookie HttpOnly.\n\n**Variáveis de ambiente necessárias:**\n- `baseUrl` — ex: `http://localhost:5000`\n- `accessToken` — preenchido após o login",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@salao.com\",\n  \"password\": \"senha123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Autentica um colaborador e retorna um access token JWT. O refresh token é definido via cookie HttpOnly."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Renova o access token usando o refresh token do cookie. Faz rotação do refresh token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Revoga a sessão atual e limpa o cookie de refresh token."
+          }
+        },
+        {
+          "name": "Me (Perfil do usuário logado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["me"]
+            },
+            "description": "Retorna os dados do colaborador autenticado: id, tenantId, professionalId (se for profissional), role, salonName."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Salão",
+      "item": [
+        {
+          "name": "Obter configurações do salão",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salon",
+              "host": ["{{baseUrl}}"],
+              "path": ["salon"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar configurações do salão",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Salão Exemplo\",\n  \"address\": \"Rua das Flores, 123 — São Paulo, SP\",\n  \"phone\": \"(11) 99999-0000\",\n  \"timeZoneId\": \"America/Sao_Paulo\",\n  \"minimumCancellationNoticeMinutes\": 60\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salon",
+              "host": ["{{baseUrl}}"],
+              "path": ["salon"]
+            },
+            "description": "Requer role: administradora."
+          }
+        },
+        {
+          "name": "Obter horários de funcionamento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salon/business-hours",
+              "host": ["{{baseUrl}}"],
+              "path": ["salon", "business-hours"]
+            }
+          }
+        },
+        {
+          "name": "Substituir horários de funcionamento",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessHours\": [\n    { \"dayOfWeek\": \"Monday\",    \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\", \"isClosed\": false },\n    { \"dayOfWeek\": \"Tuesday\",   \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\", \"isClosed\": false },\n    { \"dayOfWeek\": \"Wednesday\", \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\", \"isClosed\": false },\n    { \"dayOfWeek\": \"Thursday\",  \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\", \"isClosed\": false },\n    { \"dayOfWeek\": \"Friday\",    \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\", \"isClosed\": false },\n    { \"dayOfWeek\": \"Saturday\",  \"startLocalTime\": \"09:00\", \"endLocalTime\": \"14:00\", \"isClosed\": false },\n    { \"dayOfWeek\": \"Sunday\",    \"startLocalTime\": null,    \"endLocalTime\": null,    \"isClosed\": true  }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salon/business-hours",
+              "host": ["{{baseUrl}}"],
+              "path": ["salon", "business-hours"]
+            },
+            "description": "Substitui todos os horários de funcionamento. Requer role: administradora.\n\ndayOfWeek: Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profissionais",
+      "item": [
+        {
+          "name": "Listar profissionais",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/professionals?pageSize=20&cursor=",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals"],
+              "query": [
+                { "key": "pageSize", "value": "20" },
+                { "key": "cursor", "value": "", "description": "Token de paginação (opcional)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Criar profissional",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ana Costa\",\n  \"phone\": \"(11) 98888-1111\",\n  \"email\": \"ana.costa@salao.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/professionals",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals"]
+            },
+            "description": "Requer role: administradora."
+          }
+        },
+        {
+          "name": "Obter profissional por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/professionals/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals", ":id"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar profissional",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ana Costa\",\n  \"phone\": \"(11) 98888-2222\",\n  \"email\": \"ana.costa@salao.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/professionals/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals", ":id"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Requer role: administradora."
+          }
+        },
+        {
+          "name": "Desativar profissional",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/professionals/:id/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals", ":id", "deactivate"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Requer role: administradora."
+          }
+        },
+        {
+          "name": "Obter disponibilidade semanal",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/professionals/:id/weekly-availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals", ":id", "weekly-availability"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Profissional só pode ver a própria disponibilidade. Administradora pode ver qualquer uma."
+          }
+        },
+        {
+          "name": "Substituir disponibilidade semanal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slots\": [\n    { \"dayOfWeek\": \"Monday\",    \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\" },\n    { \"dayOfWeek\": \"Tuesday\",   \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\" },\n    { \"dayOfWeek\": \"Wednesday\", \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\" },\n    { \"dayOfWeek\": \"Thursday\",  \"startLocalTime\": \"09:00\", \"endLocalTime\": \"18:00\" },\n    { \"dayOfWeek\": \"Friday\",    \"startLocalTime\": \"09:00\", \"endLocalTime\": \"17:00\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/professionals/:id/weekly-availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals", ":id", "weekly-availability"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Profissional pode editar a própria disponibilidade. Administradora pode editar qualquer uma.\n\ndayOfWeek: Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday\nFormato de hora: HH:mm (ex: 09:00, 18:00)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Serviços",
+      "item": [
+        {
+          "name": "Listar serviços",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services?pageSize=20&cursor=",
+              "host": ["{{baseUrl}}"],
+              "path": ["services"],
+              "query": [
+                { "key": "pageSize", "value": "20" },
+                { "key": "cursor", "value": "", "description": "Token de paginação (opcional)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Criar serviço",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Corte Feminino\",\n  \"description\": \"Corte com finalização e hidratação\",\n  \"durationMinutes\": 60,\n  \"priceAmount\": 80.00,\n  \"currency\": \"BRL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["services"]
+            },
+            "description": "Requer role: administradora."
+          }
+        },
+        {
+          "name": "Obter serviço por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["services", ":id"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar serviço",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Corte Feminino\",\n  \"description\": \"Corte com finalização e hidratação leve\",\n  \"durationMinutes\": 60,\n  \"priceAmount\": 90.00,\n  \"currency\": \"BRL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/services/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["services", ":id"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Requer role: administradora."
+          }
+        },
+        {
+          "name": "Desativar serviço",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/services/:id/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["services", ":id", "deactivate"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Requer role: administradora."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "Listar clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients?pageSize=20&cursor=",
+              "host": ["{{baseUrl}}"],
+              "path": ["clients"],
+              "query": [
+                { "key": "pageSize", "value": "20" },
+                { "key": "cursor", "value": "", "description": "Token de paginação (opcional)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Criar cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maria Souza\",\n  \"phone\": \"(11) 97777-2222\",\n  \"email\": \"maria.souza@email.com\",\n  \"notes\": \"Prefere horários pela manhã\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": ["{{baseUrl}}"],
+              "path": ["clients"]
+            }
+          }
+        },
+        {
+          "name": "Obter cliente por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["clients", ":id"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maria Souza\",\n  \"phone\": \"(11) 97777-3333\",\n  \"email\": \"maria.souza@email.com\",\n  \"notes\": \"Prefere horários pela manhã. Alérgica a amônia.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["clients", ":id"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Desativar cliente",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients/:id/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["clients", ":id", "deactivate"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Requer role: administradora."
+          }
+        },
+        {
+          "name": "Histórico do cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients/:id/history?pageSize=20&cursor=",
+              "host": ["{{baseUrl}}"],
+              "path": ["clients", ":id", "history"],
+              "query": [
+                { "key": "pageSize", "value": "20" },
+                { "key": "cursor", "value": "", "description": "Token de paginação (opcional)" }
+              ],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Retorna eventos de histórico do cliente (agendamentos, cancelamentos, etc.). Profissional vê apenas seus próprios atendimentos."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agendamentos",
+      "item": [
+        {
+          "name": "Listar agendamentos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments?pageSize=20&cursor=",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments"],
+              "query": [
+                { "key": "pageSize", "value": "20" },
+                { "key": "cursor", "value": "", "description": "Token de paginação (opcional)" }
+              ]
+            },
+            "description": "Profissional vê apenas seus próprios agendamentos. Administradora vê todos."
+          }
+        },
+        {
+          "name": "Criar agendamento",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"00000000-0000-0000-0000-000000000000\",\n  \"professionalId\": \"00000000-0000-0000-0000-000000000000\",\n  \"serviceId\": \"00000000-0000-0000-0000-000000000000\",\n  \"startAtUtc\": \"2026-07-01T14:00:00Z\",\n  \"manualEndAtUtc\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments"]
+            },
+            "description": "manualEndAtUtc é opcional. Se omitido, a duração é calculada pelo serviço selecionado."
+          }
+        },
+        {
+          "name": "Obter agendamento por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", ":id"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reagendar",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newStartAtUtc\": \"2026-07-02T10:00:00Z\",\n  \"newManualEndAtUtc\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointments/:id/reschedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", ":id", "reschedule"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancelar agendamento",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/:id/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", ":id", "cancel"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Cancela um agendamento pendente ou confirmado. Profissional só pode cancelar os próprios. Administradora pode cancelar qualquer um (inclusive fora do prazo mínimo)."
+          }
+        },
+        {
+          "name": "Marcar como concluído",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/:id/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", ":id", "complete"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Marcar como no-show",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/:id/no-show",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", ":id", "no-show"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resolver revisão",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/:id/resolve-review",
+              "host": ["{{baseUrl}}"],
+              "path": ["appointments", ":id", "resolve-review"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Resolve um agendamento que está em revisão. Requer role: administradora."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disponibilidade",
+      "item": [
+        {
+          "name": "Buscar slots disponíveis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/availability?professionalId=00000000-0000-0000-0000-000000000000&date=2026-07-01&durationMinutes=60",
+              "host": ["{{baseUrl}}"],
+              "path": ["availability"],
+              "query": [
+                { "key": "professionalId", "value": "00000000-0000-0000-0000-000000000000", "description": "ID do profissional" },
+                { "key": "date", "value": "2026-07-01", "description": "Data no formato YYYY-MM-DD" },
+                { "key": "durationMinutes", "value": "60", "description": "Duração desejada em minutos" }
+              ]
+            },
+            "description": "Retorna os horários disponíveis para agendamento de um profissional em uma data específica, considerando horário de funcionamento, disponibilidade semanal, ausências e bloqueios."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ausências de Profissionais",
+      "item": [
+        {
+          "name": "Listar ausências do profissional",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/professionals/:professionalId/absences?pageSize=20&cursor=",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals", ":professionalId", "absences"],
+              "query": [
+                { "key": "pageSize", "value": "20" },
+                { "key": "cursor", "value": "", "description": "Token de paginação (opcional)" }
+              ],
+              "variable": [
+                { "key": "professionalId", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Criar ausência",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"professionalId\": \"00000000-0000-0000-0000-000000000000\",\n  \"startAtUtc\": \"2026-07-10T08:00:00Z\",\n  \"endAtUtc\": \"2026-07-10T18:00:00Z\",\n  \"reason\": \"Consulta médica\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/professional-absences",
+              "host": ["{{baseUrl}}"],
+              "path": ["professional-absences"]
+            },
+            "description": "Cria uma ausência para um profissional. Profissional pode criar a própria ausência; administradora pode criar para qualquer profissional."
+          }
+        },
+        {
+          "name": "Cancelar ausência",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/professionals/:professionalId/absences/:absenceId/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["professionals", ":professionalId", "absences", ":absenceId", "cancel"],
+              "variable": [
+                { "key": "professionalId", "value": "00000000-0000-0000-0000-000000000000" },
+                { "key": "absenceId", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Cancela uma ausência ativa. Profissional só pode cancelar a própria; administradora pode cancelar qualquer uma."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bloqueios do Salão",
+      "item": [
+        {
+          "name": "Listar bloqueios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salon-blocks?pageSize=20&cursor=",
+              "host": ["{{baseUrl}}"],
+              "path": ["salon-blocks"],
+              "query": [
+                { "key": "pageSize", "value": "20" },
+                { "key": "cursor", "value": "", "description": "Token de paginação (opcional)" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Criar bloqueio",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startAtUtc\": \"2026-07-15T00:00:00Z\",\n  \"endAtUtc\": \"2026-07-15T23:59:59Z\",\n  \"reason\": \"Feriado municipal\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salon-blocks",
+              "host": ["{{baseUrl}}"],
+              "path": ["salon-blocks"]
+            },
+            "description": "Bloqueia um período para todo o salão (nenhum profissional pode ser agendado). Requer role: administradora."
+          }
+        },
+        {
+          "name": "Remover bloqueio",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salon-blocks/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["salon-blocks", ":id"],
+              "variable": [
+                { "key": "id", "value": "00000000-0000-0000-0000-000000000000" }
+              ]
+            },
+            "description": "Requer role: administradora."
+          }
+        }
+      ]
+    }
+  ]
+}

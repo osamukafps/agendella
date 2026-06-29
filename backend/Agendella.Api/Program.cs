@@ -14,6 +14,7 @@ using Agendella.Application.Tenancy;
 using Agendella.Infrastructure.Auth;
 using Agendella.Infrastructure.Configuration;
 using Agendella.Infrastructure.Persistence;
+using Agendella.Infrastructure.Persistence.Seed;
 using Agendella.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -70,6 +71,7 @@ builder.Services.AddScoped<ProfessionalAbsenceService>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -97,10 +99,41 @@ builder.Services.AddDbContext<AgendellaDbContext>((provider, options) =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Migrations + seed automáticos em Development
 if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AgendellaDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    await db.Database.MigrateAsync();
+
+    var tenantExists = await db.SalonTenants.AnyAsync(t => t.Id == PilotTenantSeed.TenantId);
+    if (!tenantExists)
+    {
+        logger.LogInformation("Aplicando seed do tenant piloto...");
+        db.SalonTenants.Add(PilotTenantSeed.Create());
+        await db.SaveChangesAsync();
+    }
+
+    var adminExists = await db.SalonCollaborators
+        .IgnoreQueryFilters()
+        .AnyAsync(c => c.Id == PilotAdminSeed.CollaboratorId);
+    if (!adminExists)
+    {
+        logger.LogInformation("Aplicando seed da administradora piloto...");
+        var hasher = scope.ServiceProvider.GetRequiredService<Agendella.Application.Auth.IPasswordHasher>();
+        db.SalonCollaborators.Add(PilotAdminSeed.Create(hasher));
+        await db.SaveChangesAsync();
+    }
+
     app.MapOpenApi();
+}
+else
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AgendellaDbContext>();
+    await db.Database.MigrateAsync();
 }
 
 app.UseMiddleware<ErrorHandlingMiddleware>();

@@ -1,167 +1,117 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { AgendaApiService } from './agenda-api.service';
-import { AppointmentFormComponent } from './appointment-form.component';
-import { AppointmentActionsComponent } from './appointment-actions.component';
-import { ProfessionalsApiService } from '../professionals/professionals-api.service';
-import { ClientsApiService } from '../clients/clients-api.service';
-import { ServicesApiService } from '../services/services-api.service';
-import { AuthService } from '../../core/auth/auth.service';
-import {
-  formatLocalTime, getStatusLabel, getStatusBadgeClass,
-  getWeekDays, isSameLocalDay, formatDuration, todayApiDate,
-} from './agenda-utils';
-import type { AppointmentResponse, ProfessionalResponse, ClientResponse, ServiceResponse } from '../../core/api/api.models';
+import { Component } from '@angular/core';
+
+type AppointmentStatusTone = 'scheduled' | 'active' | 'completed' | 'review';
+
+interface TimelineSlot {
+  time: string;
+  label: string;
+  gridRow: string;
+}
+
+interface DailyAppointment {
+  id: string;
+  startTime: string;
+  endTime: string;
+  clientName: string;
+  serviceName: string;
+  professionalName: string;
+  statusLabel: string;
+  statusTone: AppointmentStatusTone;
+  statusColor: string;
+  gridRow: string;
+}
+
+const TIMELINE_START_MINUTES = 9 * 60;
+const TIMELINE_END_MINUTES = 18 * 60;
+const SLOT_MINUTES = 30;
+
+function minutesFromTime(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function toGridRow(startTime: string, endTime: string): string {
+  const rowStart = ((minutesFromTime(startTime) - TIMELINE_START_MINUTES) / SLOT_MINUTES) + 1;
+  const span = Math.max(1, (minutesFromTime(endTime) - minutesFromTime(startTime)) / SLOT_MINUTES);
+  return `${rowStart} / span ${span}`;
+}
 
 @Component({
   selector: 'app-agenda-page',
   standalone: true,
-  imports: [AppointmentFormComponent, AppointmentActionsComponent],
   templateUrl: './agenda-page.component.html',
-  styleUrl: './agenda-page.component.css',
+  styleUrl: './agenda-page.component.scss',
 })
-export class AgendaPageComponent implements OnInit {
-  protected readonly agendaApi      = inject(AgendaApiService);
-  private readonly profApi          = inject(ProfessionalsApiService);
-  private readonly clientsApi       = inject(ClientsApiService);
-  private readonly servicesApi      = inject(ServicesApiService);
-  readonly auth                     = inject(AuthService);
+export class AgendaPageComponent {
+  protected readonly dayLabel = 'Segunda-Feira, 29 De Junho de 2026';
+  protected readonly salonName = 'Atelier Belle Vie';
+  protected readonly nowTime = '11:20';
+  protected readonly nowLineTop = `${((minutesFromTime(this.nowTime) - TIMELINE_START_MINUTES) / SLOT_MINUTES) * 72}px`;
 
-  readonly weekDays           = getWeekDays();
-  readonly selectedDate       = signal(todayApiDate());
-  readonly allAppointments    = signal<AppointmentResponse[]>([]);
-  readonly professionals      = signal<ProfessionalResponse[]>([]);
-  readonly clients            = signal<ClientResponse[]>([]);
-  readonly services           = signal<ServiceResponse[]>([]);
-  readonly isLoading          = signal(false);
-  readonly error              = signal<string | null>(null);
-  readonly expandedId         = signal<string | null>(null);
-  readonly formMode           = signal<'create' | 'reschedule' | null>(null);
-  readonly reschedulingAppt   = signal<AppointmentResponse | null>(null);
+  protected readonly timeSlots: TimelineSlot[] = Array.from(
+    { length: (TIMELINE_END_MINUTES - TIMELINE_START_MINUTES) / SLOT_MINUTES },
+    (_, index) => {
+      const totalMinutes = TIMELINE_START_MINUTES + (index * SLOT_MINUTES);
+      const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+      const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+      const time = `${hours}:${minutes}`;
 
-  /** Filtragem client-side: agendamentos do dia selecionado, ordenados por horário */
-  readonly appointments = computed(() =>
-    this.allAppointments()
-      .filter(a => isSameLocalDay(a.startAtUtc, this.selectedDate()))
-      .sort((a, b) => a.startAtUtc.localeCompare(b.startAtUtc))
-  );
-
-  /** Maps id→name para display */
-  readonly professionalMap = computed(() =>
-    new Map(this.professionals().map(p => [p.id, p.name]))
-  );
-  readonly clientMap = computed(() =>
-    new Map(this.clients().map(c => [c.id, c.name]))
-  );
-  readonly serviceMap = computed(() =>
-    new Map(this.services().map(s => [s.id, s.name]))
-  );
-
-  async ngOnInit(): Promise<void> {
-    await this.loadAll();
-  }
-
-  async loadAll(): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
-    try {
-      const [apptRes, profRes, cliRes, svcRes] = await Promise.all([
-        this.agendaApi.list({ pageSize: 200 }),
-        this.profApi.list(),
-        this.clientsApi.list(),
-        this.servicesApi.list(),
-      ]);
-      this.allAppointments.set(apptRes.items);
-      this.professionals.set(profRes.items);
-      this.clients.set(cliRes.items);
-      this.services.set(svcRes.items);
-    } catch {
-      this.error.set('Erro ao carregar agenda.');
-    } finally {
-      this.isLoading.set(false);
+      return {
+        time,
+        label: minutes === '00' ? time : '',
+        gridRow: `${index + 1}`,
+      };
     }
-  }
+  );
 
-  selectDay(date: string): void {
-    this.selectedDate.set(date);
-    this.expandedId.set(null);
-    this.formMode.set(null);
-  }
-
-  toggleExpand(id: string): void {
-    this.expandedId.set(this.expandedId() === id ? null : id);
-  }
-
-  openCreate(): void {
-    this.formMode.set('create');
-    this.reschedulingAppt.set(null);
-    this.expandedId.set(null);
-  }
-
-  openReschedule(appt: AppointmentResponse): void {
-    this.reschedulingAppt.set(appt);
-    this.formMode.set('reschedule');
-    this.expandedId.set(null);
-  }
-
-  closeForm(): void { this.formMode.set(null); }
-
-  onSaved(appt: AppointmentResponse): void {
-    this.allAppointments.update(list => {
-      const idx = list.findIndex(a => a.id === appt.id);
-      return idx >= 0 ? list.map(a => a.id === appt.id ? appt : a) : [appt, ...list];
-    });
-    this.formMode.set(null);
-  }
-
-  async onComplete(appt: AppointmentResponse): Promise<void> {
-    try {
-      await this.agendaApi.complete(appt.id);
-      this.updateStatus(appt.id, 'Completed');
-    } catch { this.error.set('Erro ao concluir agendamento.'); }
-  }
-
-  async onNoShow(appt: AppointmentResponse): Promise<void> {
-    try {
-      await this.agendaApi.noShow(appt.id);
-      this.updateStatus(appt.id, 'NoShow');
-    } catch { this.error.set('Erro ao registrar falta.'); }
-  }
-
-  async onCancel(appt: AppointmentResponse): Promise<void> {
-    if (!confirm('Cancelar este agendamento?')) return;
-    try {
-      await this.agendaApi.cancel(appt.id);
-      this.updateStatus(appt.id, 'Cancelled');
-    } catch { this.error.set('Erro ao cancelar agendamento.'); }
-  }
-
-  async onResolveReview(appt: AppointmentResponse): Promise<void> {
-    try {
-      await this.agendaApi.resolveReview(appt.id);
-      this.allAppointments.update(list =>
-        list.map(a => a.id === appt.id ? { ...a, requiresReview: false, reviewReason: null } : a)
-      );
-      this.expandedId.set(null);
-    } catch { this.error.set('Erro ao resolver revisão.'); }
-  }
-
-  // ─── Template helpers ───────────────────────────────────────────────────────
-
-  clientName(id: string): string   { return this.clientMap().get(id) ?? '—'; }
-  profName(id: string): string     { return this.professionalMap().get(id) ?? '—'; }
-  serviceName(id: string): string  { return this.serviceMap().get(id) ?? '—'; }
-  startTime(appt: AppointmentResponse): string { return formatLocalTime(appt.startAtUtc); }
-  duration(appt: AppointmentResponse): string  { return formatDuration(appt.startAtUtc, appt.endAtUtc); }
-  statusLabel(appt: AppointmentResponse): string { return getStatusLabel(appt.status); }
-  badgeClass(appt: AppointmentResponse): string  { return getStatusBadgeClass(appt.status, appt.requiresReview); }
-
-  private updateStatus(
-    id: string,
-    status: 'Completed' | 'Cancelled' | 'NoShow'
-  ): void {
-    this.allAppointments.update(list =>
-      list.map(a => a.id === id ? { ...a, status } : a)
-    );
-    this.expandedId.set(null);
-  }
+  protected readonly appointments: DailyAppointment[] = [
+    {
+      id: 'appt-01',
+      startTime: '09:00',
+      endTime: '10:00',
+      clientName: 'Marina Costa',
+      serviceName: 'Escova modelada',
+      professionalName: 'Helena Duarte',
+      statusLabel: 'Agendado',
+      statusTone: 'scheduled',
+      statusColor: 'var(--color-primary)',
+      gridRow: toGridRow('09:00', '10:00'),
+    },
+    {
+      id: 'appt-02',
+      startTime: '10:30',
+      endTime: '11:30',
+      clientName: 'Beatriz Almeida',
+      serviceName: 'Coloração raiz',
+      professionalName: 'Clara Nunes',
+      statusLabel: 'Em atendimento',
+      statusTone: 'active',
+      statusColor: 'var(--color-secondary)',
+      gridRow: toGridRow('10:30', '11:30'),
+    },
+    {
+      id: 'appt-03',
+      startTime: '13:00',
+      endTime: '14:30',
+      clientName: 'Luiza Martins',
+      serviceName: 'Corte e hidratação',
+      professionalName: 'Helena Duarte',
+      statusLabel: 'Revisar',
+      statusTone: 'review',
+      statusColor: 'var(--color-warning)',
+      gridRow: toGridRow('13:00', '14:30'),
+    },
+    {
+      id: 'appt-04',
+      startTime: '16:00',
+      endTime: '17:00',
+      clientName: 'Camila Rocha',
+      serviceName: 'Manicure premium',
+      professionalName: 'Sofia Reis',
+      statusLabel: 'Concluído',
+      statusTone: 'completed',
+      statusColor: 'var(--color-neutral-300)',
+      gridRow: toGridRow('16:00', '17:00'),
+    },
+  ];
 }
