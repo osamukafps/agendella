@@ -256,8 +256,9 @@ export interface AppointmentConflictDetails {
   resourceName: string | null;
 }
 
-/** Resposta 409 para conflitos de agendamento — extends ErrorResponse */
-export interface AppointmentConflictErrorResponse extends ErrorResponse {
+/** Resposta 409 para conflitos de agendamento (shape próprio — details difere de ErrorResponse) */
+export interface AppointmentConflictErrorResponse {
   code: 'appointment.conflict';
-  details: AppointmentConflictDetails & Record<string, unknown>;
+  message: string;
+  details: AppointmentConflictDetails;
 }

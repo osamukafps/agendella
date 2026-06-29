@@ -1,7 +1,7 @@
-@tailwind base;
-
-/* Design tokens — paleta Borgonha */
+/* Design tokens devem vir antes de qualquer regra Tailwind */
 @import './styles/tokens.css';
+
+@tailwind base;
 
 /* ─── Reset global ─── */
 *, *::before, *::after {
@@ -15,7 +15,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  min-height: -webkit-fill-available; /* iOS Safari */
+  min-height: -webkit-fill-available;
   background: var(--color-background);
   color: var(--color-text-primary);
   font-family: var(--font-body);
@@ -25,25 +25,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Foco visível — acessibilidade */
 :focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* Remover outline em clique com mouse */
 :focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Links sem decoração por padrão */
 a {
   color: inherit;
   text-decoration: none;
 }
 
-/* Botões com cursor pointer */
 button {
   cursor: pointer;
 }
