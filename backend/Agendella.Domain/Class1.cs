@@ -1,6 +1,5 @@
-﻿namespace Agendella.Domain;
+namespace Agendella.Domain;
 
 public class Class1
 {
-
 }

@@ -61,7 +61,7 @@
 
 **Goal**: Implement domain entities, value objects, DbContext, initial migrations, indexes, and persistence mappings.
 
-- [x] T020 [P] Implement shared domain primitives in `backend/Agendella.Domain/Common/Entity.cs`, `backend/Agendella.Domain/Common/ITenantEntity.cs`, `backend/Agendella.Domain/Common/DateTimeRange.cs`, and `backend/Agendella.Domain/Common/LocalTimeRange.cs` (deps: T003)
+- [ ] T020 [P] Implement shared domain primitives in `backend/Agendella.Domain/Common/Entity.cs`, `backend/Agendella.Domain/Common/ITenantEntity.cs`, `backend/Agendella.Domain/Common/DateTimeRange.cs`, and `backend/Agendella.Domain/Common/LocalTimeRange.cs` (deps: T003)
 - [ ] T021 [P] Implement salon aggregate entities in `backend/Agendella.Domain/Entities/SalonTenant.cs` and `backend/Agendella.Domain/Entities/SalonBusinessHour.cs` (deps: T020)
 - [ ] T022 [P] Implement collaborator and refresh-token session entities in `backend/Agendella.Domain/Entities/SalonCollaborator.cs` and `backend/Agendella.Domain/Entities/RefreshTokenSession.cs` (deps: T020)
 - [ ] T023 [P] Implement professional and weekly availability entities in `backend/Agendella.Domain/Entities/Professional.cs` and `backend/Agendella.Domain/Entities/ProfessionalWeeklyAvailability.cs` (deps: T020)
