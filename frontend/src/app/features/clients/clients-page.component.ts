@@ -5,8 +5,6 @@ import { ClientsApiService, ClientPhoneDuplicateError } from './clients-api.serv
 import { applyPhoneMask, digitsOnly, formatStoredPhone } from '../../core/utils/phone';
 import type { ClientResponse, CreateClientRequest } from '../../core/api/api.models';
 
-export { formatStoredPhone };
-
 const EMPTY_FORM: CreateClientRequest = { name: '', phone: '', email: '', notes: '' };
 
 @Component({
@@ -28,6 +26,7 @@ export class ClientsPageComponent implements OnInit {
   readonly editingId    = signal<string | null>(null);
   readonly form         = signal<CreateClientRequest>({ ...EMPTY_FORM });
   readonly phoneError   = signal<string | null>(null);
+  readonly formatStoredPhone = formatStoredPhone;
 
   async ngOnInit(): Promise<void> { await this.load(); }
 

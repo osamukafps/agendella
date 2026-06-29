@@ -1,0 +1,4 @@
+@import '../../../styles/page.css';
+
+.me-value { margin: 0; font-size: var(--text-base); color: var(--color-text-primary); }
+.me-role  { text-transform: capitalize; color: var(--color-text-secondary); }

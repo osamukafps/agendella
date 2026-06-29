@@ -78,9 +78,9 @@ export class AppShellComponent {
   }
 
   @HostListener('document:click', ['$event.target'])
-  onClickOutside(target: HTMLElement): void {
+  onClickOutside(target: EventTarget | null): void {
     if (!this.menuOpen()) return;
-    if (!target.closest('.header-menu-wrapper')) {
+    if (!(target as HTMLElement | null)?.closest?.('.header-menu-wrapper')) {
       this.menuOpen.set(false);
     }
   }
