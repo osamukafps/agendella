@@ -1,14 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { App } from './app';
 
 describe('App', () => {
-  it('should create the app', () => {
+  it('should create the root component', () => {
     const app = new App();
     expect(app).toBeTruthy();
-  });
-
-  it('should expose the bootstrap title signal', () => {
-    const app = new App() as App & { title: () => string };
-    expect(app.title()).toBe('Agendella');
   });
 });

@@ -22,3 +22,10 @@ export const professionalGuard: CanActivateFn = () => {
   const router = inject(Router);
   return authService.role() === 'profissional' ? true : router.createUrlTree(['/agenda']);
 };
+
+/** Redireciona usuário JÁ autenticado para /agenda — evita exibir login novamente */
+export const loginGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+  return authService.isAuthenticated() ? router.createUrlTree(['/agenda']) : true;
+};

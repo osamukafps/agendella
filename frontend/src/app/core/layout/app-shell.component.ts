@@ -7,7 +7,6 @@ export interface NavItem {
   id: string;
   label: string;
   route: string;
-  /** Roles autorizadas. Array vazio = nenhuma restrição. */
   roles: CollaboratorRole[];
 }
 
@@ -23,35 +22,30 @@ export function getNavItemsForRole(role: CollaboratorRole | null): NavItem[] {
   return ALL_NAV_ITEMS.filter(item => item.roles.includes(role));
 }
 
-// Template mínimo — implementação completa em T124
 @Component({
   selector: 'app-shell',
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
-  template: `
-    <header class="app-header">
-      <span class="salon-name">{{ currentUser()?.tenantId }}</span>
-    </header>
-
-    <main>
-      <router-outlet />
-    </main>
-
-    <nav class="bottom-nav" aria-label="Navegação principal">
-      @for (item of navItems(); track item.id) {
-        <a
-          [routerLink]="item.route"
-          routerLinkActive="active"
-          [attr.aria-label]="item.label"
-        >{{ item.label }}</a>
-      }
-    </nav>
-  `,
+  templateUrl: './app-shell.component.html',
+  styleUrl: './app-shell.component.css',
 })
 export class AppShellComponent {
   private readonly authService = inject(AuthService);
 
   readonly currentUser = this.authService.currentUser;
-  readonly role = this.authService.role;
-  readonly navItems = computed(() => getNavItemsForRole(this.authService.role()));
+  readonly role        = this.authService.role;
+  readonly navItems    = computed(() => getNavItemsForRole(this.authService.role()));
+
+  readonly todayLabel = computed(() =>
+    new Intl.DateTimeFormat('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }).format(new Date())
+  );
+
+  readonly avatarLabel = computed(() => {
+    const r = this.authService.role();
+    return r === 'administradora' ? 'AD' : r === 'profissional' ? 'PR' : '—';
+  });
 }

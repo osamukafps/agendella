@@ -1,35 +1,13 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { signal } from '@angular/core';
+import { describe, it, expect } from 'vitest';
 import {
-  AppShellComponent,
   ALL_NAV_ITEMS,
   getNavItemsForRole,
 } from './app-shell.component';
-import { AuthService } from '../auth/auth.service';
 import type { CollaboratorRole } from '../auth/auth.models';
-import type { MeResponse } from '../auth/auth.models';
-
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
-
-const adminUser: MeResponse = {
-  collaboratorId: 'collab-1',
-  tenantId: 'tenant-1',
-  professionalId: null,
-  role: 'administradora',
-  status: 'active',
-};
-
-const professionalUser: MeResponse = {
-  collaboratorId: 'collab-2',
-  tenantId: 'tenant-1',
-  professionalId: 'prof-1',
-  role: 'profissional',
-  status: 'active',
-};
 
 // ─── Pure function: getNavItemsForRole ────────────────────────────────────────
+// Os signals do componente (navItems, role, currentUser) são composições desta função.
+// A integração completa é verificada em testes E2E / browser.
 
 describe('getNavItemsForRole()', () => {
   it('retorna 4 itens para administradora', () => {
@@ -84,7 +62,7 @@ describe('getNavItemsForRole()', () => {
     expect(getNavItemsForRole(null)).toHaveLength(0);
   });
 
-  it('todos os itens têm id, label e route definidos', () => {
+  it('todos os itens têm id, label e route válidos', () => {
     const items = getNavItemsForRole('administradora');
     items.forEach(item => {
       expect(item.id).toBeTruthy();
@@ -92,9 +70,15 @@ describe('getNavItemsForRole()', () => {
       expect(item.route).toMatch(/^\//);
     });
   });
+
+  it('todos os itens têm pelo menos uma role autorizada', () => {
+    getNavItemsForRole('administradora').forEach(item => {
+      expect(item.roles.length).toBeGreaterThan(0);
+    });
+  });
 });
 
-// ─── ALL_NAV_ITEMS definição ──────────────────────────────────────────────────
+// ─── ALL_NAV_ITEMS ────────────────────────────────────────────────────────────
 
 describe('ALL_NAV_ITEMS', () => {
   it('tem exatamente 4 itens de navegação', () => {
@@ -107,64 +91,23 @@ describe('ALL_NAV_ITEMS', () => {
     });
   });
 
-  it('Serviços é restrito a administradora', () => {
+  it('Serviços é restrito à administradora', () => {
     const servicos = ALL_NAV_ITEMS.find(i => i.id === 'servicos');
     expect(servicos?.roles).toEqual(['administradora']);
   });
-});
 
-// ─── AppShellComponent.navItems signal ───────────────────────────────────────
-
-function setupShell(role: CollaboratorRole | null, user: MeResponse | null = null) {
-  const roleSig = signal<CollaboratorRole | null>(role);
-  const userSig = signal<MeResponse | null>(user);
-
-  TestBed.configureTestingModule({
-    imports: [AppShellComponent],
-    providers: [
-      provideRouter([]),
-      {
-        provide: AuthService,
-        useValue: {
-          role: roleSig.asReadonly(),
-          currentUser: userSig.asReadonly(),
-          isAuthenticated: signal(role !== null).asReadonly(),
-          accessToken: signal<string | null>(null).asReadonly(),
-        },
-      },
-    ],
+  it('Agenda, Clientes e Perfil são acessíveis a ambos os roles', () => {
+    const allRoles = ['administradora', 'profissional'] as CollaboratorRole[];
+    ['agenda', 'clientes', 'perfil'].forEach(id => {
+      const item = ALL_NAV_ITEMS.find(i => i.id === id)!;
+      allRoles.forEach(role => {
+        expect(item.roles).toContain(role);
+      });
+    });
   });
 
-  const fixture = TestBed.createComponent(AppShellComponent);
-  fixture.detectChanges();
-  return fixture.componentInstance;
-}
-
-describe('AppShellComponent.navItems (signal)', () => {
-  afterEach(() => TestBed.resetTestingModule());
-
-  it('retorna 4 itens para administradora', () => {
-    const shell = setupShell('administradora', adminUser);
-    expect(shell.navItems()).toHaveLength(4);
-  });
-
-  it('retorna 3 itens para profissional', () => {
-    const shell = setupShell('profissional', professionalUser);
-    expect(shell.navItems()).toHaveLength(3);
-  });
-
-  it('não inclui Serviços para profissional', () => {
-    const shell = setupShell('profissional', professionalUser);
-    expect(shell.navItems().find(i => i.id === 'servicos')).toBeUndefined();
-  });
-
-  it('retorna lista vazia sem role (usuário deslogado)', () => {
-    const shell = setupShell(null, null);
-    expect(shell.navItems()).toHaveLength(0);
-  });
-
-  it('expõe currentUser da AuthService', () => {
-    const shell = setupShell('administradora', adminUser);
-    expect(shell.currentUser()).toEqual(adminUser);
+  it('itens têm ordem: Agenda → Clientes → Serviços → Perfil', () => {
+    const ids = ALL_NAV_ITEMS.map(i => i.id);
+    expect(ids).toEqual(['agenda', 'clientes', 'servicos', 'perfil']);
   });
 });

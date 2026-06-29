@@ -1,0 +1,190 @@
+/* ─── Layout de tela cheia centralizado ─── */
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  background: var(--color-background);
+  padding: var(--space-6) var(--space-4);
+}
+
+.login-page {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* ─── Branding ─── */
+.login-brand {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 300;
+  color: var(--color-primary);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  margin: 0;
+}
+
+/* Ponto final como assinatura tipográfica */
+.brand-name::after {
+  content: '.';
+  color: var(--color-primary-light);
+}
+
+.brand-tagline {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+/* ─── Formulário ─── */
+.login-form {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ─── Banner de erro ─── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-error-subtle);
+  color: var(--color-error);
+  border: 1px solid color-mix(in srgb, var(--color-error) 20%, transparent);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: var(--leading-snug);
+}
+
+.error-banner svg {
+  flex-shrink: 0;
+}
+
+/* ─── Campo de input ─── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field-label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.field-input {
+  width: 100%;
+  height: var(--touch-target-min); /* 44px — touch target mínimo */
+  padding: 0 var(--space-3);
+  background: var(--color-neutral-100);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 400;
+  color: var(--color-text-primary);
+  outline: none;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+  /* Evitar zoom no iOS ao focar (font-size mínimo 16px) */
+  -webkit-text-size-adjust: none;
+}
+
+.field-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.field-input:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.field-input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.field-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Botão de login ─── */
+.login-button {
+  width: 100%;
+  height: 52px; /* tamanho "lg" do design system */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background-color 0.12s ease, opacity 0.12s ease;
+  margin-top: var(--space-1);
+}
+
+.login-button:hover:not(:disabled) {
+  background: var(--color-primary-light);
+}
+
+.login-button:active:not(:disabled) {
+  opacity: 0.85;
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── Spinner de loading ─── */
+.button-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .button-spinner {
+    animation: none;
+    border-top-color: white;
+    opacity: 0.6;
+  }
+}

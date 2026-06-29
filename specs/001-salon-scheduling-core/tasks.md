@@ -223,12 +223,12 @@
 - [X] T117 [P] [US1] Add Vitest tests for HTTP bearer interceptor and refresh retry behavior in `frontend/src/app/core/http/auth.interceptor.spec.ts` (deps: T006, T059)
 - [X] T118 [P] [US1] Add Vitest tests for role guards and mobile shell navigation visibility in `frontend/src/app/core/auth/auth.guard.spec.ts` and `frontend/src/app/core/layout/app-shell.component.spec.ts` (deps: T006, T059)
 - [X] T119 [US1] Implement frontend API environment and generated contract-compatible core models in `frontend/src/environments/environment.ts` and `frontend/src/app/core/api/api.models.ts` (deps: T005)
-- [ ] T120 [US1] Implement auth API client with cookie-based refresh and `X-CSRF-Protection: 1` header in `frontend/src/app/core/auth/auth-api.service.ts` (deps: T119)
-- [ ] T121 [US1] Implement auth state service using signals in `frontend/src/app/core/auth/auth.service.ts` (deps: T116, T120)
-- [ ] T122 [US1] Implement bearer token interceptor and refresh retry flow in `frontend/src/app/core/http/auth.interceptor.ts` (deps: T117, T121)
-- [ ] T123 [US1] Implement route guards for authenticated, administradora, and profissional routes in `frontend/src/app/core/auth/auth.guard.ts` and `frontend/src/app/app.routes.ts` (deps: T118, T121)
-- [ ] T124 [US1] Implement responsive app shell and role-aware navigation in `frontend/src/app/core/layout/app-shell.component.ts`, `frontend/src/app/core/layout/app-shell.component.html`, and `frontend/src/app/core/layout/app-shell.component.css` (deps: T118, T123)
-- [ ] T125 [US1] Implement login page with mobile-first layout in `frontend/src/app/features/auth/login-page.component.ts`, `frontend/src/app/features/auth/login-page.component.html`, and `frontend/src/app/features/auth/login-page.component.css` (deps: T121, T124)
+- [X] T120 [US1] Implement auth API client with cookie-based refresh and `X-CSRF-Protection: 1` header in `frontend/src/app/core/auth/auth-api.service.ts` (deps: T119)
+- [X] T121 [US1] Implement auth state service using signals in `frontend/src/app/core/auth/auth.service.ts` (deps: T116, T120)
+- [X] T122 [US1] Implement bearer token interceptor and refresh retry flow in `frontend/src/app/core/http/auth.interceptor.ts` (deps: T117, T121)
+- [X] T123 [US1] Implement route guards for authenticated, administradora, and profissional routes in `frontend/src/app/core/auth/auth.guard.ts` and `frontend/src/app/app.routes.ts` (deps: T118, T121)
+- [X] T124 [US1] Implement responsive app shell and role-aware navigation in `frontend/src/app/core/layout/app-shell.component.ts`, `frontend/src/app/core/layout/app-shell.component.html`, and `frontend/src/app/core/layout/app-shell.component.css` (deps: T118, T123)
+- [X] T125 [US1] Implement login page with mobile-first layout in `frontend/src/app/features/auth/login-page.component.ts`, `frontend/src/app/features/auth/login-page.component.html`, and `frontend/src/app/features/auth/login-page.component.css` (deps: T121, T124)
 
 **Checkpoint**: Authenticated frontend shell is ready for feature screens.
 

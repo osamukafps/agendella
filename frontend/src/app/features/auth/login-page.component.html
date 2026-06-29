@@ -1,0 +1,80 @@
+<div class="login-page">
+
+  <!-- Branding -->
+  <div class="login-brand">
+    <h1 class="brand-name">agendella</h1>
+    <p class="brand-tagline">Gestão de salão, simplificada.</p>
+  </div>
+
+  <!-- Formulário de login -->
+  <form class="login-form" (submit)="onSubmit($event)" novalidate aria-label="Formulário de login">
+
+    <!-- Mensagem de erro -->
+    @if (error()) {
+      <div class="error-banner" role="alert" aria-live="assertive">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ error() }}
+      </div>
+    }
+
+    <!-- Email -->
+    <div class="field">
+      <label class="field-label" for="email">Email</label>
+      <input
+        id="email"
+        class="field-input"
+        type="email"
+        name="email"
+        autocomplete="email"
+        autocapitalize="none"
+        spellcheck="false"
+        placeholder="voce@salaodaana.com"
+        [value]="email()"
+        (input)="email.set($any($event.target).value)"
+        [attr.aria-invalid]="error() ? 'true' : null"
+        [disabled]="isLoading()"
+        required
+      >
+    </div>
+
+    <!-- Senha -->
+    <div class="field">
+      <label class="field-label" for="password">Senha</label>
+      <input
+        id="password"
+        class="field-input"
+        type="password"
+        name="password"
+        autocomplete="current-password"
+        placeholder="••••••••"
+        [value]="password()"
+        (input)="password.set($any($event.target).value)"
+        [attr.aria-invalid]="error() ? 'true' : null"
+        [disabled]="isLoading()"
+        required
+      >
+    </div>
+
+    <!-- Botão de login -->
+    <button
+      type="submit"
+      class="login-button"
+      [disabled]="isLoading()"
+      [attr.aria-busy]="isLoading()"
+    >
+      @if (isLoading()) {
+        <span class="button-spinner" aria-hidden="true"></span>
+        Entrando…
+      } @else {
+        Entrar
+      }
+    </button>
+
+  </form>
+
+</div>
