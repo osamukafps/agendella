@@ -1,0 +1,18 @@
+namespace Agendella.Domain.Common;
+
+public abstract class Entity
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is not Entity other)
+        {
+            return false;
+        }
+
+        return ReferenceEquals(this, other) || (GetType() == other.GetType() && Id == other.Id);
+    }
+
+    public override int GetHashCode() => HashCode.Combine(GetType(), Id);
+}

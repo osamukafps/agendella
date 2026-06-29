@@ -61,20 +61,20 @@
 
 **Goal**: Implement domain entities, value objects, DbContext, initial migrations, indexes, and persistence mappings.
 
-- [ ] T020 [P] Implement shared domain primitives in `backend/Agendella.Domain/Common/Entity.cs`, `backend/Agendella.Domain/Common/ITenantEntity.cs`, `backend/Agendella.Domain/Common/DateTimeRange.cs`, and `backend/Agendella.Domain/Common/LocalTimeRange.cs` (deps: T003)
-- [ ] T021 [P] Implement salon aggregate entities in `backend/Agendella.Domain/Entities/SalonTenant.cs` and `backend/Agendella.Domain/Entities/SalonBusinessHour.cs` (deps: T020)
-- [ ] T022 [P] Implement collaborator and refresh-token session entities in `backend/Agendella.Domain/Entities/SalonCollaborator.cs` and `backend/Agendella.Domain/Entities/RefreshTokenSession.cs` (deps: T020)
-- [ ] T023 [P] Implement professional and weekly availability entities in `backend/Agendella.Domain/Entities/Professional.cs` and `backend/Agendella.Domain/Entities/ProfessionalWeeklyAvailability.cs` (deps: T020)
-- [ ] T024 [P] Implement service entity with tenant-owned service model in `backend/Agendella.Domain/Entities/Service.cs` (deps: T020)
-- [ ] T025 [P] Implement client entity with tenant-scoped phone uniqueness metadata in `backend/Agendella.Domain/Entities/Client.cs` (deps: T020)
-- [ ] T026 [P] Implement appointment, salon block, professional absence, and client history event entities in `backend/Agendella.Domain/Entities/Appointment.cs`, `backend/Agendella.Domain/Entities/SalonBlock.cs`, `backend/Agendella.Domain/Entities/ProfessionalAbsence.cs`, and `backend/Agendella.Domain/Entities/ClientHistoryEvent.cs` (deps: T020)
-- [ ] T027 [P] Add domain enum definitions in `backend/Agendella.Domain/Enums/SalonStatus.cs`, `backend/Agendella.Domain/Enums/CollaboratorRole.cs`, `backend/Agendella.Domain/Enums/RecordStatus.cs`, `backend/Agendella.Domain/Enums/AppointmentStatus.cs`, and `backend/Agendella.Domain/Enums/ClientHistoryEventType.cs` (deps: T020)
-- [ ] T028 Implement `AgendellaDbContext` with DbSets and entity configurations in `backend/Agendella.Infrastructure/Persistence/AgendellaDbContext.cs` and `backend/Agendella.Infrastructure/Persistence/Configurations/*.cs` (deps: T021, T022, T023, T024, T025, T026, T027)
-- [ ] T029 Add EF configuration for unique index `(TenantId, Phone)` on clients and unique collaborator email per tenant in `backend/Agendella.Infrastructure/Persistence/Configurations/ClientConfiguration.cs` and `backend/Agendella.Infrastructure/Persistence/Configurations/SalonCollaboratorConfiguration.cs` (deps: T028)
-- [ ] T030 Add EF migration for initial schema and indexes in `backend/Agendella.Infrastructure/Migrations/*_InitialCreate.cs` and `backend/Agendella.Infrastructure/Migrations/AgendellaDbContextModelSnapshot.cs` (deps: T028, T029)
-- [ ] T031 [P] Add entity mapping tests for required fields and indexes in `backend/Agendella.Tests/Infrastructure/EntityMappingTests.cs` (deps: T028, T029)
-- [ ] T032 [P] Add automated test for unique client phone per tenant in `backend/Agendella.Tests/Infrastructure/ClientPhoneUniquenessTests.cs` (deps: T025, T029, T015)
-- [ ] T033 Add seed helper for pilot tenant with `America/Sao_Paulo` timezone in `backend/Agendella.Infrastructure/Persistence/Seed/PilotTenantSeed.cs` (deps: T028)
+- [x] T020 [P] Implement shared domain primitives in `backend/Agendella.Domain/Common/Entity.cs`, `backend/Agendella.Domain/Common/ITenantEntity.cs`, `backend/Agendella.Domain/Common/DateTimeRange.cs`, and `backend/Agendella.Domain/Common/LocalTimeRange.cs` (deps: T003)
+- [x] T021 [P] Implement salon aggregate entities in `backend/Agendella.Domain/Entities/SalonTenant.cs` and `backend/Agendella.Domain/Entities/SalonBusinessHour.cs` (deps: T020)
+- [x] T022 [P] Implement collaborator and refresh-token session entities in `backend/Agendella.Domain/Entities/SalonCollaborator.cs` and `backend/Agendella.Domain/Entities/RefreshTokenSession.cs` (deps: T020)
+- [x] T023 [P] Implement professional and weekly availability entities in `backend/Agendella.Domain/Entities/Professional.cs` and `backend/Agendella.Domain/Entities/ProfessionalWeeklyAvailability.cs` (deps: T020)
+- [x] T024 [P] Implement service entity with tenant-owned service model in `backend/Agendella.Domain/Entities/Service.cs` (deps: T020)
+- [x] T025 [P] Implement client entity with tenant-scoped phone uniqueness metadata in `backend/Agendella.Domain/Entities/Client.cs` (deps: T020)
+- [x] T026 [P] Implement appointment, salon block, professional absence, and client history event entities in `backend/Agendella.Domain/Entities/Appointment.cs`, `backend/Agendella.Domain/Entities/SalonBlock.cs`, `backend/Agendella.Domain/Entities/ProfessionalAbsence.cs`, and `backend/Agendella.Domain/Entities/ClientHistoryEvent.cs` (deps: T020)
+- [x] T027 [P] Add domain enum definitions in `backend/Agendella.Domain/Enums/SalonStatus.cs`, `backend/Agendella.Domain/Enums/CollaboratorRole.cs`, `backend/Agendella.Domain/Enums/RecordStatus.cs`, `backend/Agendella.Domain/Enums/AppointmentStatus.cs`, and `backend/Agendella.Domain/Enums/ClientHistoryEventType.cs` (deps: T020)
+- [x] T028 Implement `AgendellaDbContext` with DbSets and entity configurations in `backend/Agendella.Infrastructure/Persistence/AgendellaDbContext.cs` and `backend/Agendella.Infrastructure/Persistence/Configurations/*.cs` (deps: T021, T022, T023, T024, T025, T026, T027)
+- [x] T029 Add EF configuration for unique index `(TenantId, Phone)` on clients and unique collaborator email per tenant in `backend/Agendella.Infrastructure/Persistence/Configurations/ClientConfiguration.cs` and `backend/Agendella.Infrastructure/Persistence/Configurations/SalonCollaboratorConfiguration.cs` (deps: T028)
+- [x] T030 Add EF migration for initial schema and indexes in `backend/Agendella.Infrastructure/Migrations/*_InitialCreate.cs` and `backend/Agendella.Infrastructure/Migrations/AgendellaDbContextModelSnapshot.cs` (deps: T028, T029)
+- [x] T031 [P] Add entity mapping tests for required fields and indexes in `backend/Agendella.Tests/Infrastructure/EntityMappingTests.cs` (deps: T028, T029)
+- [x] T032 [P] Add automated test for unique client phone per tenant in `backend/Agendella.Tests/Infrastructure/ClientPhoneUniquenessTests.cs` (deps: T025, T029, T015)
+- [x] T033 Add seed helper for pilot tenant with `America/Sao_Paulo` timezone in `backend/Agendella.Infrastructure/Persistence/Seed/PilotTenantSeed.cs` (deps: T028)
 
 **Checkpoint**: Domain model, EF mappings, initial schema, and critical uniqueness tests are ready.
 
@@ -84,15 +84,15 @@
 
 **Goal**: Resolve tenant context, apply default EF scoping, enforce RLS in PostgreSQL, and isolate administrative setup paths.
 
-- [ ] T034 Implement tenant context abstraction and request-scoped accessor in `backend/Agendella.Application/Tenancy/ITenantContext.cs` and `backend/Agendella.Api/Tenancy/HttpTenantContext.cs` (deps: T013, T028)
-- [ ] T035 Add tenant resolution middleware from JWT claims and request context in `backend/Agendella.Api/Middleware/TenantResolutionMiddleware.cs` and `backend/Agendella.Api/Program.cs` (deps: T034)
-- [ ] T036 Implement EF Core global query filters for every tenant entity in `backend/Agendella.Infrastructure/Persistence/AgendellaDbContext.cs` (deps: T034, T028)
-- [ ] T037 Add database connection interceptor that sets PostgreSQL session GUC `app.tenant_id` for normal requests in `backend/Agendella.Infrastructure/Persistence/TenantSessionInterceptor.cs` (deps: T034)
-- [ ] T038 Add RLS migration for all tenant tables in `backend/Agendella.Infrastructure/Migrations/*_EnableTenantRls.cs` (deps: T030, T037)
-- [ ] T039 Add separate administrative database role migration and configuration notes in `backend/Agendella.Infrastructure/Migrations/*_AdministrativeRole.cs` and `docs/local-development.md` (deps: T038)
-- [ ] T040 [P] Add automated test for EF global query filters blocking cross-tenant reads in `backend/Agendella.Tests/Infrastructure/TenantQueryFilterTests.cs` (deps: T036, T015)
-- [ ] T041 [P] Add automated test for PostgreSQL RLS blocking cross-tenant reads when EF filter is bypassed in `backend/Agendella.Tests/Infrastructure/TenantRlsTests.cs` (deps: T038, T015)
-- [ ] T042 [P] Add automated test that direct lookup of another tenant returns not found in `backend/Agendella.Tests/Application/TenantLookupSecurityTests.cs` (deps: T036, T038)
+- [x] T034 Implement tenant context abstraction and request-scoped accessor in `backend/Agendella.Application/Tenancy/ITenantContext.cs` and `backend/Agendella.Api/Tenancy/HttpTenantContext.cs` (deps: T013, T028)
+- [x] T035 Add tenant resolution middleware from JWT claims and request context in `backend/Agendella.Api/Middleware/TenantResolutionMiddleware.cs` and `backend/Agendella.Api/Program.cs` (deps: T034)
+- [x] T036 Implement EF Core global query filters for every tenant entity in `backend/Agendella.Infrastructure/Persistence/AgendellaDbContext.cs` (deps: T034, T028)
+- [x] T037 Add database connection interceptor that sets PostgreSQL session GUC `app.tenant_id` for normal requests in `backend/Agendella.Infrastructure/Persistence/TenantSessionInterceptor.cs` (deps: T034)
+- [x] T038 Add RLS migration for all tenant tables in `backend/Agendella.Infrastructure/Migrations/*_EnableTenantRls.cs` (deps: T030, T037)
+- [x] T039 Add separate administrative database role migration and configuration notes in `backend/Agendella.Infrastructure/Migrations/*_AdministrativeRole.cs` and `docs/local-development.md` (deps: T038)
+- [x] T040 [P] Add automated test for EF global query filters blocking cross-tenant reads in `backend/Agendella.Tests/Infrastructure/TenantQueryFilterTests.cs` (deps: T036, T015)
+- [x] T041 [P] Add automated test for PostgreSQL RLS blocking cross-tenant reads when EF filter is bypassed in `backend/Agendella.Tests/Infrastructure/TenantRlsTests.cs` (deps: T038, T015)
+- [x] T042 [P] Add automated test that direct lookup of another tenant returns not found in `backend/Agendella.Tests/Application/TenantLookupSecurityTests.cs` (deps: T036, T038)
 
 **Checkpoint**: Tenant scoping is enforced in application and database layers.
 

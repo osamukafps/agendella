@@ -36,6 +36,13 @@ dotnet ef migrations list --project backend/Agendella.Infrastructure --startup-p
 - Connection string source: `backend/Agendella.Api/appsettings.Development.json`
 - Integration test override env var: `AGENDLLA_TEST_POSTGRES`
 
+## Tenant Isolation Notes
+
+- O `AgendellaDbContext` aplica filtros globais por `TenantId` a todas as entidades multi-tenant.
+- O backend grava `app.tenant_id` na sessao PostgreSQL via `TenantSessionInterceptor`.
+- As migrations da Fase 3 habilitam RLS nas tabelas com `TenantId`.
+- A role `agendella_admin` e criada com `BYPASSRLS` para futuros fluxos administrativos revisados, fora do caminho normal da API autenticada.
+
 ## Frontend Bootstrap Commands
 
 ```bash
