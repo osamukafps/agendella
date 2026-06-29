@@ -221,7 +221,7 @@
 
 - [X] T116 [P] [US1] Add Vitest tests for auth service login/refresh/logout state transitions in `frontend/src/app/core/auth/auth.service.spec.ts` (deps: T006, T059)
 - [X] T117 [P] [US1] Add Vitest tests for HTTP bearer interceptor and refresh retry behavior in `frontend/src/app/core/http/auth.interceptor.spec.ts` (deps: T006, T059)
-- [ ] T118 [P] [US1] Add Vitest tests for role guards and mobile shell navigation visibility in `frontend/src/app/core/auth/auth.guard.spec.ts` and `frontend/src/app/core/layout/app-shell.component.spec.ts` (deps: T006, T059)
+- [X] T118 [P] [US1] Add Vitest tests for role guards and mobile shell navigation visibility in `frontend/src/app/core/auth/auth.guard.spec.ts` and `frontend/src/app/core/layout/app-shell.component.spec.ts` (deps: T006, T059)
 - [ ] T119 [US1] Implement frontend API environment and generated contract-compatible core models in `frontend/src/environments/environment.ts` and `frontend/src/app/core/api/api.models.ts` (deps: T005)
 - [ ] T120 [US1] Implement auth API client with cookie-based refresh and `X-CSRF-Protection: 1` header in `frontend/src/app/core/auth/auth-api.service.ts` (deps: T119)
 - [ ] T121 [US1] Implement auth state service using signals in `frontend/src/app/core/auth/auth.service.ts` (deps: T116, T120)
