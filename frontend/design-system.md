@@ -334,6 +334,48 @@ Circular. Iniciais do colaborador quando sem foto. Tamanhos: 24px (compacto), 32
 
 ---
 
+### Menu do Usuário
+
+**Trigger:** avatar circular 32px com iniciais da colaboradora logada, posicionado no canto superior direito do header. Mesmas regras visuais do Avatar. Ao passar o cursor em desktop, exibe tooltip com o nome completo. O botão deve ter `aria-label="Menu de [nome]"`, `aria-expanded`, e `aria-haspopup="menu"`.
+
+**Comportamento de abertura:**
+- **Desktop (≥768px):** clique abre um dropdown posicionado abaixo e alinhado à direita do avatar. Largura mínima 220px. Fundo `--color-surface`, borda `1px solid --color-border`, raio `--radius-lg`, sombra `--shadow-lg`. Animação: fade-in em 120ms (opacity 0→1); nenhum scale ou slide.
+- **Mobile (<768px):** clique abre um `Sheet` (bottom sheet) com o mesmo conteúdo, seguindo as regras do componente Sheet.
+
+**Conteúdo do menu (ordem obrigatória):**
+
+1. **Cabeçalho não-clicável** — fundo `--color-neutral-50`, padding `--space-3` × `--space-4`. Nome completo da colaboradora em Manrope 600 `--text-sm` `--color-text-primary`. Papel ("administradora" ou "profissional") em Manrope 400 `--text-xs` `--color-text-tertiary` abaixo do nome. Não recebe `:hover`, `role="menuitem"` nem foco de teclado.
+2. **Separador** — `1px solid --color-border`, sem padding extra.
+3. **"Meu perfil"** — item clicável, navega para `/me`. Ícone `CircleUser` (20px, `strokeWidth 1.5`) à esquerda do label. Mostra dados básicos da colaboradora em modo somente leitura no MVP.
+4. **"Configurações do salão"** — item clicável, **visível somente para administradora**, navega para `/salon`. Ícone `Settings` (20px) à esquerda do label.
+5. **Separador** — `1px solid --color-border`.
+6. **"Sair"** — item clicável, invoca logout: revoga o refresh token no servidor, limpa o estado de sessão no frontend e redireciona para `/login`. Texto `--color-error`. Ícone `LogOut` (20px) à esquerda do label.
+
+**Estilo dos itens clicáveis (3, 4 e 6):**
+```
+padding: --space-3 (top/bottom) --space-4 (left/right)
+display: flex; align-items: center; gap: --space-2
+font: Manrope 400, --text-sm, --color-text-primary (exceto "Sair": --color-error)
+hover: background --color-neutral-100 (transição 80ms)
+focus-visible: outline padrão do design system
+role="menuitem"
+```
+
+**Comportamento de fechamento:**
+- Seleção de qualquer item (fecha após executar a ação ou navegar).
+- Clique fora do dropdown / toque no overlay do sheet.
+- Tecla `ESC` — retorna o foco ao botão do avatar.
+- Navegação de rota (o dropdown fecha automaticamente ao trocar de rota).
+
+**Acessibilidade:**
+- Container do dropdown: `role="menu"`.
+- Ao abrir, o foco deve ir para o primeiro item com `role="menuitem"`.
+- Navegação por setas (`ArrowDown` / `ArrowUp`) entre itens; `Home` / `End` para primeiro e último.
+- `ESC` fecha e devolve foco ao avatar.
+- Em mobile, o Sheet herda a acessibilidade do componente Sheet (`role="dialog"`, trap de foco).
+
+---
+
 ### Empty State
 
 **Anatomia:** ícone Lucide centralizado em `--color-neutral-300` (40px, strokeWidth 1.5), título (`--text-md`, weight 600, `--color-text-primary`), descrição (`--text-base`, `--color-text-secondary`), botão de ação (opcional). Sem ilustrações ou gráficos decorativos.
@@ -502,3 +544,38 @@ A timeline é a assinatura visual do produto.
 ### Criação de agendamento
 
 Fluxo via Sheet (bottom sheet), não nova tela. Campos: profissional (se admin), cliente (com busca), serviço (select), data, hora início, hora fim (auto-calculada + campo manual opcional). Botão "Criar agendamento" fixado no rodapé da sheet.
+
+---
+
+## 9. Formato de Telefone
+
+### Contexto
+
+O MVP atende exclusivamente salões brasileiros. Todos os telefones são nacionais.
+
+### Máscara de input
+
+| Tipo    | Dígitos pós-DDD | Máscara              | Exemplo                |
+|---------|-----------------|----------------------|------------------------|
+| Celular | 11 (com 9)      | `(00) 00000-0000`    | `(11) 99999-8888`      |
+| Fixo    | 10              | `(00) 0000-0000`     | `(21) 3333-4444`       |
+
+**Detecção automática de tipo:** se o nono dígito digitado após o DDD for `9`, aplica a máscara de celular; caso contrário, aplica a máscara de fixo. A máscara ajusta-se em tempo real conforme o usuário digita — sem necessidade de seletor de tipo.
+
+### Armazenamento (backend)
+
+- Apenas dígitos, sem máscara, prefixados com o código do país `+55`.
+- Exemplo: `(11) 99999-8888` → enviado ao backend e armazenado como `+5511999998888`.
+- O frontend remove máscara e espaços antes de qualquer requisição de API. O backend nunca recebe parênteses, hífens ou espaços.
+
+### Exibição na UI
+
+- Campos de lista, cards e telas de detalhe exibem o número formatado com a máscara aplicada ao valor armazenado.
+- O campo de input exibe a máscara progressiva durante a digitação.
+
+### Validação
+
+1. **Tamanho:** após remover `+55` e qualquer formatação, o número deve ter exatamente **10 dígitos** (fixo) ou **11 dígitos** (celular). Qualquer outro tamanho é rejeitado.
+2. **DDD válido:** os dois primeiros dígitos devem pertencer à lista oficial da ANATEL. Faixas válidas: 11–19 (SP), 21–22, 24 (RJ/região), 27–28 (ES), 31–38 (MG), 41–49 (PR/SC), 51–55 (RS, excluindo 52), 61–69 (Centro-Oeste), 71–75, 77, 79 (BA/SE), 81–89 (Nordeste), 91–99 (Norte/Nordeste). DDDs não alocados (ex.: 20, 23, 25, 26, 29, 30, 39, 40, 52, 56–60, 70, 72, 76, 78, 80, 90) são inválidos.
+3. **Feedback imediato:** a mensagem de validação deve aparecer no helper text do campo, inline, antes do envio do formulário. Nunca rejeitar silenciosamente ou só no servidor.
+4. **Unicidade por tenant:** o mesmo número não pode estar cadastrado para dois clientes do mesmo tenant (ver FR-008A). Esse erro é retornado pelo servidor e exibido no helper text do campo de telefone.
