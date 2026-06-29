@@ -240,16 +240,16 @@
 
 **Independent Test Criteria**: Administradora can configure core tenant data from mobile and desktop; profissional sees only allowed client and self-availability operations.
 
-- [ ] T126 [P] [US1] Add Vitest tests for salon settings and business-hours forms in `frontend/src/app/features/salon-settings/salon-settings-page.component.spec.ts` (deps: T006, T124)
-- [ ] T127 [P] [US1] Add Vitest tests for services list/form and service deactivation behavior in `frontend/src/app/features/services/services-page.component.spec.ts` (deps: T006, T124)
-- [ ] T128 [P] [US1] Add Vitest tests for professionals and weekly availability screens in `frontend/src/app/features/professionals/professionals-page.component.spec.ts` (deps: T006, T124)
-- [ ] T129 [P] [US1] Add Vitest tests for clients list/form duplicate-phone error display in `frontend/src/app/features/clients/clients-page.component.spec.ts` (deps: T006, T124)
-- [ ] T130 [US1] Implement salon settings API client and page in `frontend/src/app/features/salon-settings/salon-settings-api.service.ts`, `frontend/src/app/features/salon-settings/salon-settings-page.component.ts`, and `frontend/src/app/features/salon-settings/salon-settings-page.component.html` (deps: T126, T122)
-- [ ] T131 [US1] Implement services API client and page in `frontend/src/app/features/services/services-api.service.ts`, `frontend/src/app/features/services/services-page.component.ts`, and `frontend/src/app/features/services/services-page.component.html` (deps: T127, T122)
-- [ ] T132 [US1] Implement professionals API client, page, and weekly availability editor in `frontend/src/app/features/professionals/professionals-api.service.ts`, `frontend/src/app/features/professionals/professionals-page.component.ts`, and `frontend/src/app/features/professionals/weekly-availability-editor.component.ts` (deps: T128, T122)
-- [ ] T133 [US1] Implement clients API client and admin client page in `frontend/src/app/features/clients/clients-api.service.ts`, `frontend/src/app/features/clients/clients-page.component.ts`, and `frontend/src/app/features/clients/clients-page.component.html` (deps: T129, T122)
-- [ ] T134 [US2] Implement professional self availability route using the shared weekly availability editor in `frontend/src/app/features/professionals/my-availability-page.component.ts` and `frontend/src/app/app.routes.ts` (deps: T132, T123)
-- [ ] T135 [US2] Implement professional allowed client create/update UI in `frontend/src/app/features/clients/client-quick-form.component.ts` and `frontend/src/app/features/clients/clients-api.service.ts` (deps: T133)
+- [X] T126 [P] [US1] Add Vitest tests for salon settings and business-hours forms in `frontend/src/app/features/salon-settings/salon-settings-page.component.spec.ts` (deps: T006, T124)
+- [X] T127 [P] [US1] Add Vitest tests for services list/form and service deactivation behavior in `frontend/src/app/features/services/services-page.component.spec.ts` (deps: T006, T124)
+- [X] T128 [P] [US1] Add Vitest tests for professionals and weekly availability screens in `frontend/src/app/features/professionals/professionals-page.component.spec.ts` (deps: T006, T124)
+- [X] T129 [P] [US1] Add Vitest tests for clients list/form duplicate-phone error display in `frontend/src/app/features/clients/clients-page.component.spec.ts` (deps: T006, T124)
+- [X] T130 [US1] Implement salon settings API client and page in `frontend/src/app/features/salon-settings/salon-settings-api.service.ts`, `frontend/src/app/features/salon-settings/salon-settings-page.component.ts`, and `frontend/src/app/features/salon-settings/salon-settings-page.component.html` (deps: T126, T122)
+- [X] T131 [US1] Implement services API client and page in `frontend/src/app/features/services/services-api.service.ts`, `frontend/src/app/features/services/services-page.component.ts`, and `frontend/src/app/features/services/services-page.component.html` (deps: T127, T122)
+- [X] T132 [US1] Implement professionals API client, page, and weekly availability editor in `frontend/src/app/features/professionals/professionals-api.service.ts`, `frontend/src/app/features/professionals/professionals-page.component.ts`, and `frontend/src/app/features/professionals/weekly-availability-editor.component.ts` (deps: T128, T122)
+- [X] T133 [US1] Implement clients API client and admin client page in `frontend/src/app/features/clients/clients-api.service.ts`, `frontend/src/app/features/clients/clients-page.component.ts`, and `frontend/src/app/features/clients/clients-page.component.html` (deps: T129, T122)
+- [X] T134 [US2] Implement professional self availability route using the shared weekly availability editor in `frontend/src/app/features/professionals/my-availability-page.component.ts` and `frontend/src/app/app.routes.ts` (deps: T132, T123)
+- [X] T135 [US2] Implement professional allowed client create/update UI in `frontend/src/app/features/clients/client-quick-form.component.ts` and `frontend/src/app/features/clients/clients-api.service.ts` (deps: T133)
 
 **Checkpoint**: Tenant cadastro screens are usable and role-scoped in the SPA.
 

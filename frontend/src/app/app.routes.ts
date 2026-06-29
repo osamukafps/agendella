@@ -3,20 +3,16 @@ import { Routes } from '@angular/router';
 import { AppShellComponent } from './core/layout/app-shell.component';
 import { authGuard, adminGuard, loginGuard } from './core/auth/auth.guard';
 
-// Placeholder mínimo para rotas ainda não implementadas (Fases 9-11)
 @Component({ standalone: true, template: '' })
 class PlaceholderPage {}
 
 export const routes: Routes = [
-  // Login — redireciona para /agenda se já autenticado
   {
     path: 'login',
     canActivate: [loginGuard],
     loadComponent: () =>
       import('./features/auth/login-page.component').then(m => m.LoginPageComponent),
   },
-
-  // Shell autenticado — layout com header + bottom nav
   {
     path: '',
     component: AppShellComponent,
@@ -24,37 +20,51 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'agenda', pathMatch: 'full' },
 
-      // Fase 10 — agenda (ambos os roles)
+      // ─── Agenda (Fase 10) ───────────────────────────────────────────────
       { path: 'agenda', component: PlaceholderPage },
 
-      // Fase 9 — clientes (ambos os roles)
-      { path: 'clientes', component: PlaceholderPage },
-
-      // Fase 9 — serviços (apenas administradora)
-      {
-        path: 'servicos',
-        component: PlaceholderPage,
-        canActivate: [adminGuard],
-      },
-
-      // Fase 9 — configurações do salão (apenas administradora)
+      // ─── Cadastros do tenant (Fase 9) ──────────────────────────────────
       {
         path: 'salon',
-        component: PlaceholderPage,
         canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/salon-settings/salon-settings-page.component')
+            .then(m => m.SalonSettingsPageComponent),
       },
-
-      // Fase 11 — bloqueios (apenas administradora)
       {
-        path: 'bloqueios',
-        component: PlaceholderPage,
+        path: 'servicos',
         canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/services/services-page.component')
+            .then(m => m.ServicesPageComponent),
+      },
+      {
+        path: 'profissionais',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/professionals/professionals-page.component')
+            .then(m => m.ProfessionalsPageComponent),
+      },
+      {
+        path: 'clientes',
+        loadComponent: () =>
+          import('./features/clients/clients-page.component')
+            .then(m => m.ClientsPageComponent),
       },
 
-      // Fase 11 — ausências (próprio profissional ou admin)
+      // ─── Minha disponibilidade (US2 — T134) ────────────────────────────
+      {
+        path: 'minha-disponibilidade',
+        loadComponent: () =>
+          import('./features/professionals/my-availability-page.component')
+            .then(m => m.MyAvailabilityPageComponent),
+      },
+
+      // ─── Bloqueios e ausências (Fase 11) ───────────────────────────────
+      { path: 'bloqueios', component: PlaceholderPage, canActivate: [adminGuard] },
       { path: 'ausencias', component: PlaceholderPage },
 
-      // Perfil (ambos os roles)
+      // ─── Perfil ────────────────────────────────────────────────────────
       { path: 'perfil', component: PlaceholderPage },
     ],
   },

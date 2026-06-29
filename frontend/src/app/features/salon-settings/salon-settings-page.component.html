@@ -1,0 +1,83 @@
+<div class="page-layout">
+  <header class="page-header">
+    <h2 class="page-title">Configurações do Salão</h2>
+  </header>
+
+  @if (isLoading()) {
+    <div class="state-loading">Carregando…</div>
+  } @else {
+
+    @if (error()) {
+      <div class="state-error" role="alert">{{ error() }}</div>
+    }
+
+    @if (saveOk()) {
+      <div class="state-success" role="status">Salvo com sucesso.</div>
+    }
+
+    <!-- Dados do Salão -->
+    <section class="form-section">
+      <h3 class="section-title">Dados do salão</h3>
+      <form (submit)="saveSettings($event)" novalidate>
+        <div class="field">
+          <label class="field-label" for="name">Nome do salão</label>
+          <input id="name" class="field-input" type="text" autocomplete="organization"
+            [value]="formName()" (input)="formName.set($any($event.target).value)">
+        </div>
+        <div class="field">
+          <label class="field-label" for="address">Endereço</label>
+          <input id="address" class="field-input" type="text" autocomplete="street-address"
+            [value]="formAddress()" (input)="formAddress.set($any($event.target).value)">
+        </div>
+        <div class="field">
+          <label class="field-label" for="phone">Telefone</label>
+          <input id="phone" class="field-input" type="tel" autocomplete="tel"
+            [value]="formPhone()" (input)="formPhone.set($any($event.target).value)">
+        </div>
+        <div class="field">
+          <label class="field-label" for="cancel">Aviso mínimo de cancelamento (min)</label>
+          <input id="cancel" class="field-input" type="number" min="0"
+            [value]="formMinCancel()"
+            (input)="formMinCancel.set(+$any($event.target).value)">
+        </div>
+        <button type="submit" class="btn-primary" [disabled]="isSaving()">
+          {{ isSaving() ? 'Salvando…' : 'Salvar dados' }}
+        </button>
+      </form>
+    </section>
+
+    <!-- Horários de Funcionamento -->
+    <section class="form-section">
+      <h3 class="section-title">Horários de funcionamento</h3>
+      <div class="hours-list">
+        @for (h of hours(); track h.dayOfWeek; let i = $index) {
+          <div class="hours-row">
+            <label class="hours-toggle">
+              <input type="checkbox" [checked]="!h.isClosed"
+                (change)="toggleHourClosed(i)"
+                [attr.aria-label]="daysPt[h.dayOfWeek]">
+              <span class="hours-day">{{ daysPt[h.dayOfWeek] }}</span>
+            </label>
+            @if (!h.isClosed) {
+              <div class="hours-times">
+                <input type="time" class="time-input" [value]="h.startLocalTime ?? ''"
+                  (change)="updateHourTime(i, 'startLocalTime', $any($event.target).value)"
+                  [attr.aria-label]="daysPt[h.dayOfWeek] + ' abertura'">
+                <span class="time-sep">–</span>
+                <input type="time" class="time-input" [value]="h.endLocalTime ?? ''"
+                  (change)="updateHourTime(i, 'endLocalTime', $any($event.target).value)"
+                  [attr.aria-label]="daysPt[h.dayOfWeek] + ' fechamento'">
+              </div>
+            } @else {
+              <span class="hours-closed">Fechado</span>
+            }
+          </div>
+        }
+      </div>
+      <button class="btn-primary" (click)="saveHours()" [disabled]="isSaving()">
+        {{ isSaving() ? 'Salvando…' : 'Salvar horários' }}
+      </button>
+    </section>
+
+  }
+</div>

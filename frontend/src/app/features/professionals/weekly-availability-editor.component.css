@@ -1,0 +1,41 @@
+.availability-editor { display: flex; flex-direction: column; gap: var(--space-4); }
+.editor-loading { color: var(--color-text-tertiary); font-size: var(--text-sm); padding: var(--space-4) 0; }
+.editor-error { background: var(--color-error-subtle); color: var(--color-error); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); }
+.editor-success { background: var(--color-success-subtle); color: var(--color-success); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); }
+
+.days-list { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.day-row {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); min-height: 52px;
+  transition: opacity 0.12s;
+}
+.day-row--disabled { opacity: 0.7; }
+
+.day-toggle { display: flex; align-items: center; gap: var(--space-2); min-width: 100px; cursor: pointer; }
+.day-toggle input[type=checkbox] { accent-color: var(--color-primary); width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
+.day-label { font-size: var(--text-sm); font-weight: 600; color: var(--color-text-primary); }
+
+.time-range { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.time-range--error .time-input { border-color: var(--color-error); }
+.time-input {
+  height: 36px; padding: 0 var(--space-2);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-text-primary);
+  background: var(--color-neutral-100); outline: none;
+}
+.time-input:focus { border-color: var(--color-primary); background: var(--color-surface); }
+.time-separator { color: var(--color-text-tertiary); font-size: var(--text-sm); }
+.time-error-msg { font-size: var(--text-xs); color: var(--color-error); width: 100%; }
+
+.day-unavailable { font-size: var(--text-sm); color: var(--color-text-tertiary); font-style: italic; }
+
+.btn-save {
+  height: 48px; background: var(--color-primary); color: white;
+  border: none; border-radius: var(--radius-md); font-family: var(--font-body);
+  font-size: var(--text-base); font-weight: 600; cursor: pointer;
+  transition: opacity 0.12s;
+}
+.btn-save:disabled { opacity: 0.55; cursor: not-allowed; }

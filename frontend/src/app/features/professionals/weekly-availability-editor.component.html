@@ -1,0 +1,67 @@
+@if (isLoading()) {
+  <div class="editor-loading" aria-live="polite">Carregando disponibilidade…</div>
+} @else {
+  <div class="availability-editor">
+
+    @if (error()) {
+      <div class="editor-error" role="alert">{{ error() }}</div>
+    }
+
+    @if (saveOk()) {
+      <div class="editor-success" role="status">Disponibilidade salva com sucesso.</div>
+    }
+
+    <div class="days-list">
+      @for (row of rows(); track row.dayOfWeek; let i = $index) {
+        <div class="day-row" [class.day-row--disabled]="!row.enabled">
+
+          <label class="day-toggle">
+            <input
+              type="checkbox"
+              [checked]="row.enabled"
+              (change)="toggleDay(i)"
+              [attr.aria-label]="row.dayLabel"
+            >
+            <span class="day-label">{{ row.dayLabel }}</span>
+          </label>
+
+          @if (row.enabled) {
+            <div class="time-range" [class.time-range--error]="hasError(i)">
+              <input
+                type="time"
+                class="time-input"
+                [value]="row.start"
+                (change)="updateTime(i, 'start', $any($event.target).value)"
+                [attr.aria-label]="row.dayLabel + ' início'"
+              >
+              <span class="time-separator">–</span>
+              <input
+                type="time"
+                class="time-input"
+                [value]="row.end"
+                (change)="updateTime(i, 'end', $any($event.target).value)"
+                [attr.aria-label]="row.dayLabel + ' fim'"
+              >
+              @if (hasError(i)) {
+                <span class="time-error-msg">Fim deve ser após o início</span>
+              }
+            </div>
+          } @else {
+            <span class="day-unavailable">Indisponível</span>
+          }
+
+        </div>
+      }
+    </div>
+
+    <button
+      class="btn-save"
+      (click)="save()"
+      [disabled]="isSaving() || hasAnyError"
+      [attr.aria-busy]="isSaving()"
+    >
+      @if (isSaving()) { Salvando… } @else { Salvar disponibilidade }
+    </button>
+
+  </div>
+}

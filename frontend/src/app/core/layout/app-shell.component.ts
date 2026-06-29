@@ -11,10 +11,11 @@ export interface NavItem {
 }
 
 export const ALL_NAV_ITEMS: NavItem[] = [
-  { id: 'agenda',   label: 'Agenda',   route: '/agenda',   roles: ['administradora', 'profissional'] },
-  { id: 'clientes', label: 'Clientes', route: '/clientes', roles: ['administradora', 'profissional'] },
-  { id: 'servicos', label: 'Serviços', route: '/servicos', roles: ['administradora'] },
-  { id: 'perfil',   label: 'Perfil',   route: '/perfil',   roles: ['administradora', 'profissional'] },
+  { id: 'agenda',          label: 'Agenda',          route: '/agenda',                roles: ['administradora', 'profissional'] },
+  { id: 'clientes',        label: 'Clientes',        route: '/clientes',              roles: ['administradora', 'profissional'] },
+  { id: 'servicos',        label: 'Serviços',        route: '/servicos',              roles: ['administradora'] },
+  { id: 'disponibilidade', label: 'Disponível.',     route: '/minha-disponibilidade', roles: ['profissional'] },
+  { id: 'perfil',          label: 'Perfil',          route: '/perfil',                roles: ['administradora', 'profissional'] },
 ];
 
 export function getNavItemsForRole(role: CollaboratorRole | null): NavItem[] {
