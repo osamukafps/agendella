@@ -515,6 +515,22 @@ claras quando nao ha horario disponivel.
   permissao e limitar o uso desses dados ao contexto operacional do salao.
 - **FR-036**: O sistema MUST funcionar em navegador web responsivo para administradora e
   profissional nas jornadas principais do MVP.
+- **FR-037**: O sistema MUST exibir no header da aplicacao um menu do usuario acessivel pelo
+  avatar circular da colaboradora logada, posicionado no canto superior direito. O menu MUST
+  apresentar, em ordem: cabecalho nao-clicavel com nome completo e papel da colaboradora,
+  separador, item "Meu perfil" que navega para a rota `/me` em modo somente leitura, item
+  "Configuracoes do salao" visivel somente para administradora que navega para a rota `/salon`,
+  separador e item "Sair" que invoca logout, revoga a sessao e redireciona para a tela de login.
+  O menu MUST fechar ao selecionar qualquer item, ao clicar fora da area do menu e ao pressionar
+  ESC. Em desktop, o menu MUST ser exibido como dropdown; em mobile, MUST ser exibido como
+  bottom sheet.
+- **FR-038**: O sistema MUST aplicar mascara de entrada brasileira ao campo de telefone da
+  cliente: `(00) 00000-0000` para celulares (11 digitos) e `(00) 0000-0000` para telefones fixos
+  (10 digitos), com deteccao automatica pelo nono digito apos o DDD. O sistema MUST armazenar
+  o telefone no backend apenas como digitos prefixados com o codigo do pais `+55`, sem nenhum
+  caractere de formatacao. O sistema MUST rejeitar telefones com numero de digitos incorreto ou
+  DDD inexistente na lista oficial da ANATEL, exibindo mensagem de validacao inline no campo
+  antes do envio.
 
 ### Constitutional Constraints *(mandatory when applicable)*
 
