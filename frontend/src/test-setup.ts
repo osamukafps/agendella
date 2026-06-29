@@ -1,3 +1,9 @@
 import '@angular/compiler';
+import { getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 
-// Shared Vitest bootstrap for the Angular SPA during repository bootstrap.
+getTestBed().initTestEnvironment(
+  BrowserTestingModule,
+  platformBrowserTesting(),
+  { teardown: { destroyAfterEach: false } }
+);
