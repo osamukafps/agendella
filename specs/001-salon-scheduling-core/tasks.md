@@ -219,7 +219,7 @@
 
 **Independent Test Criteria**: A collaborator can log in on mobile, receive access token in app state, refresh silently via cookie, navigate protected routes by role, and log out cleanly.
 
-- [ ] T116 [P] [US1] Add Vitest tests for auth service login/refresh/logout state transitions in `frontend/src/app/core/auth/auth.service.spec.ts` (deps: T006, T059)
+- [X] T116 [P] [US1] Add Vitest tests for auth service login/refresh/logout state transitions in `frontend/src/app/core/auth/auth.service.spec.ts` (deps: T006, T059)
 - [ ] T117 [P] [US1] Add Vitest tests for HTTP bearer interceptor and refresh retry behavior in `frontend/src/app/core/http/auth.interceptor.spec.ts` (deps: T006, T059)
 - [ ] T118 [P] [US1] Add Vitest tests for role guards and mobile shell navigation visibility in `frontend/src/app/core/auth/auth.guard.spec.ts` and `frontend/src/app/core/layout/app-shell.component.spec.ts` (deps: T006, T059)
 - [ ] T119 [US1] Implement frontend API environment and generated contract-compatible core models in `frontend/src/environments/environment.ts` and `frontend/src/app/core/api/api.models.ts` (deps: T005)

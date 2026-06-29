@@ -1,0 +1,130 @@
+/* Agendella Design Tokens — Paleta: Borgonha */
+/* Para trocar para Argila: substituir os três valores de --color-primary* */
+
+:root {
+  /* ─── PRIMÁRIA: Borgonha #7C3B50 ─── */
+  --color-primary:        #7C3B50;
+  --color-primary-light:  #A85E74;
+  --color-primary-subtle: #F5E8ED;
+
+  /* ─── SECUNDÁRIA: Sálvia ─── */
+  --color-secondary:        #7A8C6E;
+  --color-secondary-light:  #9FAE95;
+  --color-secondary-subtle: #EDF1EA;
+
+  /* ─── NEUTROS QUENTES (Stone) ─── */
+  --color-neutral-950: #1C1917;
+  --color-neutral-800: #292524;
+  --color-neutral-600: #57534E;
+  --color-neutral-400: #A8A29E;
+  --color-neutral-300: #D6D3D1;
+  --color-neutral-200: #E7E5E4;
+  --color-neutral-100: #F5F5F4;
+  --color-neutral-50:  #FAFAF9;
+
+  /* ─── SEMÂNTICOS ─── */
+  --color-success:         #3D7A5A;
+  --color-success-subtle:  #E8F3ED;
+  --color-error:           #A8372A;
+  --color-error-subtle:    #F5E8E6;
+  --color-warning:         #C07A24;
+  --color-warning-subtle:  #F7F0E3;
+  --color-info:            #4A6FA5;
+  --color-info-subtle:     #E8EDF5;
+
+  /* ─── STATUS DE AGENDAMENTO ─── */
+  --color-status-scheduled-fg: var(--color-primary);
+  --color-status-scheduled-bg: var(--color-primary-subtle);
+  --color-status-active-fg:    var(--color-primary);
+  --color-status-active-bg:    var(--color-primary-subtle);
+  --color-status-done-fg:      var(--color-neutral-400);
+  --color-status-done-bg:      var(--color-neutral-100);
+  --color-status-cancelled-fg: var(--color-error);
+  --color-status-cancelled-bg: var(--color-error-subtle);
+  --color-status-noshow-fg:    var(--color-error);
+  --color-status-noshow-bg:    var(--color-error-subtle);
+  --color-status-review-fg:    var(--color-warning);
+  --color-status-review-bg:    var(--color-warning-subtle);
+  --color-status-upcoming-fg:  var(--color-secondary);
+  --color-status-upcoming-bg:  var(--color-secondary-subtle);
+
+  /* ─── SUPERFÍCIE ─── */
+  --color-background:    #FAFAF9;
+  --color-surface:       #FFFFFF;
+  --color-border:        #E7E5E4;
+  --color-border-subtle: #F0EFEE;
+
+  /* ─── TEXTO ─── */
+  --color-text-primary:   #1C1917;
+  --color-text-secondary: #57534E;
+  --color-text-tertiary:  #A8A29E;
+  --color-text-inverse:   #FFFFFF;
+  --color-text-on-primary: #FFFFFF;
+
+  /* ─── TIPOGRAFIA ─── */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body:    'Manrope', system-ui, -apple-system, sans-serif;
+
+  /* ─── ESCALA TIPOGRÁFICA (razão 1.25 — Major Third) ─── */
+  --text-xs:   0.64rem;   /* ≈10px — timestamps, legenda de badge */
+  --text-sm:   0.8rem;    /* ≈13px — labels, metadados de card */
+  --text-base: 1rem;      /* 16px  — corpo, itens de lista */
+  --text-md:   1.25rem;   /* 20px  — nomes de cliente, subtítulos */
+  --text-lg:   1.563rem;  /* 25px  — títulos de seção (Cormorant) */
+  --text-xl:   1.953rem;  /* 31px  — nome do salão no header (Cormorant) */
+
+  /* ─── LINE-HEIGHT ─── */
+  --leading-tight:   1.15;
+  --leading-snug:    1.35;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  /* ─── LETTER-SPACING ─── */
+  --tracking-tight:  -0.02em;
+  --tracking-normal:  0em;
+  --tracking-wide:    0.04em;
+  --tracking-wider:   0.08em;
+
+  /* ─── ESPAÇAMENTO (base 4px, múltiplos de 8px) ─── */
+  --space-1:  0.25rem;  /* 4px  */
+  --space-2:  0.5rem;   /* 8px  */
+  --space-3:  0.75rem;  /* 12px */
+  --space-4:  1rem;     /* 16px */
+  --space-5:  1.25rem;  /* 20px */
+  --space-6:  1.5rem;   /* 24px */
+  --space-8:  2rem;     /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+
+  /* ─── BORDER RADIUS ─── */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-pill: 9999px;
+
+  /* ─── SOMBRAS ─── */
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06);
+  --shadow-md: 0 2px 8px rgba(28, 25, 23, 0.08);
+  --shadow-lg: 0 4px 16px rgba(28, 25, 23, 0.10);
+
+  /* ─── Z-INDEX ─── */
+  --z-header:  100;
+  --z-sheet:   200;
+  --z-dialog:  300;
+  --z-toast:   400;
+
+  /* ─── LAYOUT ─── */
+  --bottom-nav-height:    56px;
+  --header-height:        56px;
+  --timeline-time-width:  52px;
+  --touch-target-min:     44px;
+}
+
+/* Suporte a prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
