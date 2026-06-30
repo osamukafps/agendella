@@ -1,8 +1,9 @@
-<div class="form-card">
+<div class="form-card appointment-form">
   <div class="form-header">
-    <h3 class="form-title">
-      {{ mode === 'create' ? 'Novo agendamento' : 'Reagendar' }}
-    </h3>
+    <div class="form-header__copy">
+      <h3 class="form-title">{{ mode === 'create' ? 'Novo agendamento' : 'Reagendar' }}</h3>
+      <p>Escolha cliente, profissional, serviço e horário real antes de confirmar.</p>
+    </div>
     <button type="button" class="btn-close" (click)="cancelled.emit()" aria-label="Fechar">✕</button>
   </div>
 
@@ -11,106 +12,230 @@
   }
 
   @if (isLoading()) {
-    <div class="state-loading">Carregando…</div>
+    <div class="state-loading">Carregando dados do formulário…</div>
   } @else {
-
-    <form (submit)="submit($event)" novalidate>
+    <form class="appointment-form__body" (submit)="submit($event)" novalidate>
       @if (mode === 'create') {
-        <!-- Profissional -->
-        <div class="field">
-          <label class="field-label" for="af-prof">Profissional</label>
-          <select id="af-prof" class="field-input"
-            [value]="selectedProfId()"
-            (change)="selectedProfId.set($any($event.target).value); selectedSlot.set(null)">
-            <option value="">Selecione…</option>
-            @for (p of professionals(); track p.id) {
-              <option [value]="p.id">{{ p.name }}</option>
-            }
-          </select>
-        </div>
+        <section class="selection-section">
+          <div class="selection-section__header">
+            <div>
+              <h4>Profissional</h4>
+              <p>Selecione quem vai executar o atendimento.</p>
+            </div>
+            <span class="selection-section__meta">{{ professionalsState.items().length }} carregados</span>
+          </div>
 
-        <!-- Cliente -->
-        <div class="field">
-          <label class="field-label" for="af-cli">Cliente</label>
-          <select id="af-cli" class="field-input"
-            [value]="selectedClientId()"
-            (change)="selectedClientId.set($any($event.target).value)">
-            <option value="">Selecione…</option>
-            @for (c of clients(); track c.id) {
-              <option [value]="c.id">{{ c.name }}</option>
+          <div class="field">
+            <label class="field-label" for="af-prof-query">Filtrar profissional</label>
+            <input
+              id="af-prof-query"
+              class="field-input"
+              type="search"
+              placeholder="Nome, e-mail ou telefone"
+              [value]="professionalsState.query()"
+              (input)="setQuery(professionalsState, $any($event.target).value)"
+            >
+          </div>
+
+          @if (fieldError('professionalId')) {
+            <span class="field-error" role="alert">{{ fieldError('professionalId') }}</span>
+          }
+
+          @if (professionalsState.error()) {
+            <div class="state-error" role="alert">{{ professionalsState.error() }}</div>
+          }
+
+          <div class="option-list" role="list" aria-label="Profissionais disponíveis">
+            @for (professional of filteredProfessionals(); track professional.id) {
+              <button
+                type="button"
+                class="option-card"
+                [class.option-card--selected]="selectedProfId() === professional.id"
+                (click)="chooseProfessional(professional.id)"
+              >
+                <strong>{{ professional.name }}</strong>
+                <span>{{ professional.email || professional.phone }}</span>
+              </button>
+            } @empty {
+              <div class="option-empty">Nenhuma profissional encontrada entre os itens carregados.</div>
             }
-          </select>
-          @if (!showNewClient()) {
-            <button type="button" class="btn-inline-link" (click)="openNewClient()">
-              + Cadastrar nova cliente
+          </div>
+
+          @if (hasMoreProfessionals()) {
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="loadMoreProfessionals()"
+              [disabled]="professionalsState.isLoadingMore()"
+            >
+              {{ professionalsState.isLoadingMore() ? 'Carregando…' : 'Carregar mais profissionais' }}
             </button>
+          }
+        </section>
+
+        <section class="selection-section">
+          <div class="selection-section__header">
+            <div>
+              <h4>Cliente</h4>
+              <p>Pesquise entre as clientes carregadas ou cadastre uma nova.</p>
+            </div>
+            <span class="selection-section__meta">{{ clientsState.items().length }} carregadas</span>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="af-client-query">Filtrar cliente</label>
+            <input
+              id="af-client-query"
+              class="field-input"
+              type="search"
+              placeholder="Nome, telefone, e-mail ou observação"
+              [value]="clientsState.query()"
+              (input)="setQuery(clientsState, $any($event.target).value)"
+            >
+          </div>
+
+          @if (fieldError('clientId')) {
+            <span class="field-error" role="alert">{{ fieldError('clientId') }}</span>
+          }
+
+          @if (clientsState.error()) {
+            <div class="state-error" role="alert">{{ clientsState.error() }}</div>
+          }
+
+          <div class="option-list" role="list" aria-label="Clientes disponíveis">
+            @for (client of filteredClients(); track client.id) {
+              <button
+                type="button"
+                class="option-card"
+                [class.option-card--selected]="selectedClientId() === client.id"
+                (click)="chooseClient(client.id)"
+              >
+                <strong>{{ client.name }}</strong>
+                <span>{{ client.phone || 'Sem telefone' }}</span>
+              </button>
+            } @empty {
+              <div class="option-empty">Nenhuma cliente encontrada entre os itens carregados.</div>
+            }
+          </div>
+
+          <div class="selection-actions">
+            @if (hasMoreClients()) {
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="loadMoreClients()"
+                [disabled]="clientsState.isLoadingMore()"
+              >
+                {{ clientsState.isLoadingMore() ? 'Carregando…' : 'Carregar mais clientes' }}
+              </button>
+            }
+
+            @if (!showNewClient()) {
+              <button type="button" class="btn-inline-link" (click)="openNewClient()">
+                + Cadastrar nova cliente
+              </button>
+            }
+          </div>
+
+          @if (showNewClient()) {
+            <app-client-quick-form
+              (saved)="handleNewClientSaved($event)"
+              (cancelled)="closeNewClient()"
+            />
+          }
+        </section>
+
+        <section class="selection-section">
+          <div class="selection-section__header">
+            <div>
+              <h4>Serviço</h4>
+              <p>Escolha o serviço para calcular a duração e liberar os horários.</p>
+            </div>
+            <span class="selection-section__meta">{{ servicesState.items().length }} carregados</span>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="af-service-query">Filtrar serviço</label>
+            <input
+              id="af-service-query"
+              class="field-input"
+              type="search"
+              placeholder="Nome, descrição ou duração"
+              [value]="servicesState.query()"
+              (input)="setQuery(servicesState, $any($event.target).value)"
+            >
+          </div>
+
+          @if (fieldError('serviceId')) {
+            <span class="field-error" role="alert">{{ fieldError('serviceId') }}</span>
+          }
+
+          @if (servicesState.error()) {
+            <div class="state-error" role="alert">{{ servicesState.error() }}</div>
+          }
+
+          <div class="option-list" role="list" aria-label="Serviços disponíveis">
+            @for (service of filteredServices(); track service.id) {
+              <button
+                type="button"
+                class="option-card"
+                [class.option-card--selected]="selectedSvcId() === service.id"
+                (click)="chooseService(service.id)"
+              >
+                <strong>{{ service.name }}</strong>
+                <span>{{ service.durationMinutes }} min{{ service.description ? ' · ' + service.description : '' }}</span>
+              </button>
+            } @empty {
+              <div class="option-empty">Nenhum serviço encontrado entre os itens carregados.</div>
+            }
+          </div>
+
+          @if (hasMoreServices()) {
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="loadMoreServices()"
+              [disabled]="servicesState.isLoadingMore()"
+            >
+              {{ servicesState.isLoadingMore() ? 'Carregando…' : 'Carregar mais serviços' }}
+            </button>
+          }
+        </section>
+      }
+
+      <section class="selection-section">
+        <div class="selection-section__header">
+          <div>
+            <h4>Data e horário</h4>
+            <p>
+              @if (selectedProfessional()) {
+                {{ selectedProfessional()?.name }}
+              } @else {
+                Selecione profissional e serviço para carregar horários reais.
+              }
+            </p>
+          </div>
+          @if (selectedService()) {
+            <span class="selection-section__meta">{{ durationLabel() }}</span>
           }
         </div>
 
-        <!-- Cadastro inline de nova cliente -->
-        @if (showNewClient()) {
-          <div class="inline-form">
-            <h4 class="inline-form__title">Nova cliente</h4>
-            @if (newClientError()) {
-              <div class="state-error" role="alert">{{ newClientError() }}</div>
-            }
-            <form (submit)="saveNewClient($event)" novalidate>
-              <div class="field">
-                <label class="field-label" for="nc-name">Nome *</label>
-                <input id="nc-name" class="field-input" type="text" required
-                  [value]="newClientName()"
-                  (input)="newClientName.set($any($event.target).value)">
-              </div>
-              <div class="field">
-                <label class="field-label" for="nc-phone">Telefone *</label>
-                <input id="nc-phone" class="field-input" type="tel" required
-                  placeholder="(00) 00000-0000"
-                  [value]="newClientPhone()"
-                  (input)="newClientPhone.set($any($event.target).value)">
-              </div>
-              <div class="field">
-                <label class="field-label" for="nc-email">E-mail</label>
-                <input id="nc-email" class="field-input" type="email"
-                  [value]="newClientEmail()"
-                  (input)="newClientEmail.set($any($event.target).value)">
-              </div>
-              <div class="form-actions">
-                <button type="button" class="btn-ghost" (click)="cancelNewClient()">Cancelar</button>
-                <button type="submit" class="btn-primary" [disabled]="newClientSaving()">
-                  {{ newClientSaving() ? 'Salvando…' : 'Cadastrar' }}
-                </button>
-              </div>
-            </form>
-          </div>
+        @if (fieldError('startAtUtc', 'newStartAtUtc')) {
+          <span class="field-error" role="alert">{{ fieldError('startAtUtc', 'newStartAtUtc') }}</span>
         }
 
-        <!-- Serviço -->
-        <div class="field">
-          <label class="field-label" for="af-svc">Serviço</label>
-          <select id="af-svc" class="field-input"
-            [value]="selectedSvcId()"
-            (change)="selectedSvcId.set($any($event.target).value); selectedSlot.set(null)">
-            <option value="">Selecione…</option>
-            @for (s of services(); track s.id) {
-              <option [value]="s.id">{{ s.name }} ({{ s.durationMinutes }} min)</option>
-            }
-          </select>
-        </div>
-      }
-
-      <!-- Picker de disponibilidade (ativo quando profissional + duração definidos) -->
-      @if (activeProfessionalId() && durationMinutes() > 0) {
-        <div class="field">
-          <label class="field-label">Data e horário</label>
+        @if (activeProfessionalId() && durationMinutes() > 0) {
           <app-availability-picker
             [professionalId]="activeProfessionalId()"
             [durationMinutes]="durationMinutes()"
+            [initialDate]="selectedAvailabilityDate() || preferredDate"
+            (dateSelected)="onAvailabilityDateSelected($event)"
             (slotSelected)="onSlotSelected($event)"
           />
-        </div>
-      } @else if (mode === 'create') {
-        <p class="picker-hint">Selecione profissional e serviço para ver horários disponíveis.</p>
-      }
+        } @else if (mode === 'create') {
+          <p class="picker-hint">Escolha profissional e serviço para ver os horários disponíveis do sistema.</p>
+        }
+      </section>
 
       <div class="form-actions">
         <button type="button" class="btn-ghost" (click)="cancelled.emit()">Cancelar</button>
@@ -120,10 +245,9 @@
           [disabled]="!canSubmit() || isSaving()"
           [attr.aria-busy]="isSaving()"
         >
-          {{ isSaving() ? 'Salvando…' : (mode === 'create' ? 'Agendar' : 'Reagendar') }}
+          {{ isSaving() ? 'Salvando…' : (mode === 'create' ? 'Criar agendamento' : 'Reagendar') }}
         </button>
       </div>
     </form>
-
   }
 </div>

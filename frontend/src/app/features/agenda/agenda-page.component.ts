@@ -4,7 +4,9 @@ import { AgendaApiService } from './agenda-api.service';
 import { ClientsApiService } from '../clients/clients-api.service';
 import { ProfessionalsApiService } from '../professionals/professionals-api.service';
 import { ServicesApiService } from '../services/services-api.service';
+import { SalonSettingsApiService } from '../salon-settings/salon-settings-api.service';
 import { AppointmentCardComponent } from './appointment-card.component';
+import { AppointmentFormComponent } from './appointment-form.component';
 import { getApiErrorMessage } from '../../core/api/api-error.utils';
 import { collectCursorPages } from '../../core/api/cursor-pagination';
 import {
@@ -14,6 +16,8 @@ import {
   buildTimelineSlots,
   DEFAULT_TIMELINE_END_MINUTES,
   formatAgendaDateLabel,
+  formatBusinessHoursLabel,
+  getApiDayOfWeek,
   getNowMarkerTop,
   getTimelineBounds,
   getWeekDays,
@@ -32,6 +36,7 @@ import type {
 } from './agenda-utils';
 import type {
   AppointmentResponse,
+  BusinessHourDto,
   ClientResponse,
   ProfessionalResponse,
   ServiceResponse,
@@ -73,18 +78,19 @@ function lastLocalAppointmentDate(appointments: AppointmentResponse[]): string |
 @Component({
   selector: 'app-agenda-page',
   standalone: true,
-  imports: [AppointmentCardComponent],
+  imports: [AppointmentCardComponent, AppointmentFormComponent],
   templateUrl: './agenda-page.component.html',
   styleUrl: './agenda-page.component.scss',
 })
 export class AgendaPageComponent implements OnInit, OnDestroy {
-  @Input() scope: 'all' | 'mine' = 'all';
+  @Input() scope: 'all' | 'mine' | undefined = 'all';
 
   private readonly authService = inject(AuthService);
   private readonly agendaApi = inject(AgendaApiService);
   private readonly clientsApi = inject(ClientsApiService);
   private readonly professionalsApi = inject(ProfessionalsApiService);
   private readonly servicesApi = inject(ServicesApiService);
+  private readonly salonSettingsApi = inject(SalonSettingsApiService);
 
   private readonly currentDateTime = signal(new Date());
   private readonly nowTimerId = typeof window === 'undefined'
@@ -95,8 +101,10 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
   protected readonly isLoading = signal(false);
   protected readonly hasLoadedOnce = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly isCreateSheetOpen = signal(false);
   protected readonly nextAppointmentsCursor = signal<string | null | undefined>(undefined);
   protected readonly appointments = signal<AppointmentResponse[]>([]);
+  protected readonly businessHours = signal<BusinessHourDto[]>([]);
   protected readonly lookupMaps = signal<AgendaLookupMaps>(buildAgendaLookupMaps([], [], []));
   protected readonly statusLegend = [
     { id: 'scheduled', label: 'Agendado', color: 'var(--color-primary)' },
@@ -118,9 +126,21 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     this.scope === 'mine' && !this.authService.currentUser()?.professionalId
   );
 
+  protected readonly showCreateAction = computed(() => this.scope !== 'mine');
+
+  protected readonly canCreateAppointment = computed(() =>
+    this.showCreateAction() && !this.isMineUnavailable()
+  );
+
   protected readonly weekDays = computed(() => getWeekDays(parseApiDate(this.selectedDate())));
   protected readonly weekRangeLabel = computed(() => formatWeekRange(this.weekDays()));
   protected readonly dayLabel = computed(() => formatAgendaDateLabel(this.selectedDate()));
+  protected readonly selectedDayBusinessHours = computed(() =>
+    this.businessHours().find(hour => hour.dayOfWeek === getApiDayOfWeek(this.selectedDate())) ?? null
+  );
+  protected readonly selectedDayBusinessHoursLabel = computed(() =>
+    formatBusinessHoursLabel(this.selectedDayBusinessHours())
+  );
   protected readonly isCurrentDayView = computed(() => this.selectedDate() === todayApiDate());
   protected readonly currentTimeLabel = computed(() =>
     new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(this.currentDateTime())
@@ -131,7 +151,12 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
   );
 
   protected readonly timelineBounds = computed<TimelineBounds>(() =>
-    getTimelineBounds(this.selectedDayAppointments(), this.isCurrentDayView(), this.currentDateTime())
+    getTimelineBounds(
+      this.selectedDayAppointments(),
+      this.isCurrentDayView(),
+      this.selectedDayBusinessHours(),
+      this.currentDateTime(),
+    )
   );
 
   protected readonly timeSlots = computed(() => buildTimelineSlots(this.timelineBounds()));
@@ -267,6 +292,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     this.error.set(null);
 
     try {
+      await this.loadBusinessHours();
       await this.loadLookups();
       this.appointments.set([]);
       this.nextAppointmentsCursor.set(undefined);
@@ -277,6 +303,24 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  protected openCreateSheet(): void {
+    if (!this.canCreateAppointment()) {
+      return;
+    }
+
+    this.isCreateSheetOpen.set(true);
+  }
+
+  protected closeCreateSheet(): void {
+    this.isCreateSheetOpen.set(false);
+  }
+
+  protected async handleAppointmentCreated(appointment: AppointmentResponse): Promise<void> {
+    this.selectedDate.set(toApiDate(new Date(appointment.startAtUtc)));
+    this.closeCreateSheet();
+    await this.refreshAgenda();
   }
 
   private async ensureAgendaCoverage(): Promise<void> {
@@ -324,6 +368,11 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     ]);
 
     this.lookupMaps.set(buildAgendaLookupMaps(clients, professionals, services));
+  }
+
+  private async loadBusinessHours(): Promise<void> {
+    const hours = await this.salonSettingsApi.getBusinessHours();
+    this.businessHours.set(hours);
   }
 
   private async collectAllClients(): Promise<ClientResponse[]> {

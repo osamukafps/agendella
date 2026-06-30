@@ -1,6 +1,7 @@
-import { Component, EventEmitter, Input, OnChanges, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, computed, inject, signal } from '@angular/core';
 import { AgendaApiService } from './agenda-api.service';
-import { conflictTypeLabel, formatSlotTime, getWeekDays, toApiDate } from './agenda-utils';
+import { formatSlotTime, getWeekDays, parseApiDate, toApiDate } from './agenda-utils';
+import { getApiErrorMessage } from '../../core/api/api-error.utils';
 import type { AvailabilitySlotDto } from '../../core/api/api.models';
 import type { WeekDay } from './agenda-utils';
 
@@ -9,9 +10,18 @@ import type { WeekDay } from './agenda-utils';
   standalone: true,
   template: `
     <div class="picker">
-      <!-- Seletor de semana -->
+      <div class="picker-week-header">
+        <button type="button" class="picker-week-nav" (click)="goToPreviousWeek()">
+          Semana anterior
+        </button>
+        <span>{{ weekRangeLabel() }}</span>
+        <button type="button" class="picker-week-nav" (click)="goToNextWeek()">
+          Próxima semana
+        </button>
+      </div>
+
       <div class="week-strip">
-        @for (day of weekDays; track day.date) {
+        @for (day of weekDays(); track day.date) {
           <button
             type="button"
             class="week-day"
@@ -29,9 +39,11 @@ import type { WeekDay } from './agenda-utils';
 
       @if (isLoading()) {
         <div class="picker-loading" aria-live="polite">Buscando horários…</div>
-      } @else if (conflictError()) {
+      } @else if (error()) {
         <div class="picker-conflict" role="alert">
-          <strong>Horário indisponível:</strong> {{ conflictError() }}
+          <strong>Não foi possível carregar os horários.</strong>
+          <span>{{ error() }}</span>
+          <button type="button" class="picker-retry" (click)="retry()">Tentar novamente</button>
         </div>
       } @else if (slots().length === 0 && selectedDate()) {
         <div class="picker-empty">
@@ -56,61 +68,138 @@ import type { WeekDay } from './agenda-utils';
   `,
   styles: [`
     .picker { display: flex; flex-direction: column; gap: var(--space-4); }
+    .picker-week-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2);
+      color: var(--color-text-secondary);
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+    .picker-week-nav {
+      min-height: 36px;
+      padding: 0 var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      background: var(--color-surface);
+      color: var(--color-text-primary);
+      font-size: var(--text-xs);
+    }
     .week-strip {
-      display: flex; gap: var(--space-1); overflow-x: auto; scrollbar-width: none;
-      padding-bottom: var(--space-1);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-2);
     }
     .week-day {
       display: flex; flex-direction: column; align-items: center; gap: 2px;
-      padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
+      padding: var(--space-2) var(--space-3); border-radius: 16px;
       border: 1px solid var(--color-border); background: var(--color-surface);
-      cursor: pointer; min-width: 44px; flex-shrink: 0; transition: background 0.1s;
+      cursor: pointer; min-height: 54px;
     }
     .week-day--active  { background: var(--color-primary); border-color: var(--color-primary); color: white; }
     .week-day--today:not(.week-day--active) { border-color: var(--color-primary); }
-    .day-abbr { font-size: var(--text-xs); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+    .day-abbr { font-size: var(--text-xs); font-weight: 500; letter-spacing: 0.05em; }
     .day-num  { font-size: var(--text-base); font-weight: 700; }
     .picker-loading, .picker-empty { color: var(--color-text-tertiary); font-size: var(--text-sm); text-align: center; padding: var(--space-6) 0; }
     .picker-conflict {
+      display: grid;
+      gap: var(--space-2);
       background: var(--color-warning-subtle); color: var(--color-warning);
       border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: var(--text-sm);
     }
+    .picker-retry {
+      justify-self: start;
+      min-height: 36px;
+      padding: 0 var(--space-3);
+      border: 1px solid rgba(192, 122, 36, 0.2);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.88);
+      color: var(--color-warning);
+      font-size: var(--text-sm);
+    }
     .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: var(--space-2); }
     .slot-btn {
-      height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
       background: var(--color-surface); font-family: var(--font-body); font-size: var(--text-sm);
       font-weight: 500; color: var(--color-text-primary); cursor: pointer; transition: background 0.1s;
     }
     .slot-btn:hover { background: var(--color-primary-subtle); border-color: var(--color-primary-light); }
     .slot-btn--selected { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+    @media (min-width: 768px) {
+      .week-strip { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    }
   `],
 })
 export class AvailabilityPickerComponent implements OnChanges {
   @Input({ required: true }) professionalId!: string;
   @Input({ required: true }) durationMinutes!: number;
-  @Output() slotSelected = new EventEmitter<AvailabilitySlotDto>();
+  @Input() initialDate = '';
+  @Output() slotSelected = new EventEmitter<AvailabilitySlotDto | null>();
+  @Output() dateSelected = new EventEmitter<string>();
 
   private readonly api = inject(AgendaApiService);
 
-  readonly weekDays: WeekDay[]       = getWeekDays();
-  readonly selectedDate             = signal<string>(this.weekDays[0]?.date ?? toApiDate());
-  readonly slots                    = signal<AvailabilitySlotDto[]>([]);
-  readonly isLoading                = signal(false);
-  readonly conflictError            = signal<string | null>(null);
-  readonly selected                 = signal<AvailabilitySlotDto | null>(null);
+  readonly anchorDate = signal(this.initialDate || toApiDate());
+  readonly selectedDate = signal(this.initialDate || toApiDate());
+  readonly slots = signal<AvailabilitySlotDto[]>([]);
+  readonly isLoading = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly selected = signal<AvailabilitySlotDto | null>(null);
+
+  readonly weekDays = computed<WeekDay[]>(() => getWeekDays(parseApiDate(this.anchorDate())));
+  readonly weekRangeLabel = computed(() => {
+    const days = this.weekDays();
+    const first = days[0]?.date;
+    const last = days[days.length - 1]?.date;
+
+    if (!first || !last) {
+      return '';
+    }
+
+    const formatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' });
+    return `${formatter.format(parseApiDate(first))} - ${formatter.format(parseApiDate(last))}`;
+  });
 
   readonly formatSlot = formatSlotTime;
 
   async ngOnChanges(): Promise<void> {
-    if (this.professionalId && this.durationMinutes) {
+    const nextDate = this.initialDate || this.selectedDate() || toApiDate();
+    this.anchorDate.set(nextDate);
+    this.selectedDate.set(nextDate);
+    this.selected.set(null);
+    this.slotSelected.emit(null);
+
+    if (this.professionalId && this.durationMinutes > 0) {
       await this.loadSlots();
     }
+  }
+
+  async goToPreviousWeek(): Promise<void> {
+    const anchor = parseApiDate(this.anchorDate());
+    anchor.setDate(anchor.getDate() - 7);
+    const nextDate = toApiDate(anchor);
+    this.anchorDate.set(nextDate);
+    await this.selectDate(nextDate);
+  }
+
+  async goToNextWeek(): Promise<void> {
+    const anchor = parseApiDate(this.anchorDate());
+    anchor.setDate(anchor.getDate() + 7);
+    const nextDate = toApiDate(anchor);
+    this.anchorDate.set(nextDate);
+    await this.selectDate(nextDate);
   }
 
   async selectDate(date: string): Promise<void> {
     this.selectedDate.set(date);
     this.selected.set(null);
-    this.slotSelected.emit(undefined as unknown as AvailabilitySlotDto);
+    this.dateSelected.emit(date);
+    this.slotSelected.emit(null);
+    await this.loadSlots();
+  }
+
+  async retry(): Promise<void> {
     await this.loadSlots();
   }
 
@@ -125,15 +214,18 @@ export class AvailabilityPickerComponent implements OnChanges {
 
   private async loadSlots(): Promise<void> {
     this.isLoading.set(true);
-    this.conflictError.set(null);
+    this.error.set(null);
     this.slots.set([]);
+
     try {
-      const res = await this.api.searchAvailability(
-        this.professionalId, this.selectedDate(), this.durationMinutes
+      const response = await this.api.searchAvailability(
+        this.professionalId,
+        this.selectedDate(),
+        this.durationMinutes,
       );
-      this.slots.set(res.slots);
-    } catch {
-      this.conflictError.set('Erro ao buscar disponibilidade.');
+      this.slots.set(response.slots);
+    } catch (error) {
+      this.error.set(getApiErrorMessage(error, 'Erro ao buscar disponibilidade.'));
     } finally {
       this.isLoading.set(false);
     }

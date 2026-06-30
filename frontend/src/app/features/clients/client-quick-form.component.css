@@ -1,0 +1,20 @@
+@import '../../../styles/page.css';
+
+.client-quick-form {
+  gap: var(--space-3);
+  border-radius: 20px;
+  padding: var(--space-4);
+  background: rgba(250, 250, 249, 0.94);
+}
+
+.client-quick-form__header {
+  display: grid;
+  gap: 4px;
+}
+
+.client-quick-form__header p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}

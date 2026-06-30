@@ -2,6 +2,7 @@ import type {
   AppointmentResponse,
   AppointmentStatus,
   AvailabilitySlotDto,
+  BusinessHourDto,
   ClientResponse,
   ProfessionalResponse,
   ServiceResponse,
@@ -12,6 +13,7 @@ export const DEFAULT_TIMELINE_END_MINUTES = 18 * 60;
 export const SLOT_MINUTES = 30;
 
 const ABBRS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const API_DAY_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
 // ─── Formatação de datas/horários ─────────────────────────────────────────────
 
@@ -53,6 +55,31 @@ export function formatAgendaDateLabel(dateStr: string): string {
     month: 'long',
     year: 'numeric',
   }).format(parseApiDate(dateStr));
+}
+
+export function getApiDayOfWeek(dateStr: string): BusinessHourDto['dayOfWeek'] {
+  return API_DAY_ORDER[parseApiDate(dateStr).getDay()];
+}
+
+export function formatBusinessHoursLabel(hours: BusinessHourDto | null | undefined): string {
+  if (!hours || hours.isClosed || !hours.startLocalTime || !hours.endLocalTime) {
+    return 'Fechado neste dia';
+  }
+
+  return `${hours.startLocalTime} - ${hours.endLocalTime}`;
+}
+
+export function minutesFromLocalTime(localTime: string | null | undefined): number | null {
+  if (!localTime) {
+    return null;
+  }
+
+  const [hours, minutes] = localTime.split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return null;
+  }
+
+  return (hours * 60) + minutes;
 }
 
 // ─── Status labels e classes ──────────────────────────────────────────────────
@@ -199,13 +226,23 @@ function clampMinutes(minutes: number): number {
 export function getTimelineBounds(
   appointments: AppointmentResponse[],
   isCurrentDay: boolean,
+  businessHours?: BusinessHourDto | null,
   now: Date = new Date(),
 ): TimelineBounds {
+  const businessStart = minutesFromLocalTime(businessHours?.startLocalTime);
+  const businessEnd = minutesFromLocalTime(businessHours?.endLocalTime);
+  const fallbackStart = businessStart ?? DEFAULT_TIMELINE_START_MINUTES;
+  const fallbackEnd = businessEnd ?? DEFAULT_TIMELINE_END_MINUTES;
+
   if (appointments.length === 0) {
+    const endMinutes = clampMinutes(
+      ceilToSlot(fallbackEnd + SLOT_MINUTES),
+    );
+
     return {
-      startMinutes: DEFAULT_TIMELINE_START_MINUTES,
-      endMinutes: DEFAULT_TIMELINE_END_MINUTES,
-      slotCount: (DEFAULT_TIMELINE_END_MINUTES - DEFAULT_TIMELINE_START_MINUTES) / SLOT_MINUTES,
+      startMinutes: clampMinutes(floorToSlot(fallbackStart)),
+      endMinutes,
+      slotCount: Math.max(1, (endMinutes - clampMinutes(floorToSlot(fallbackStart))) / SLOT_MINUTES),
     };
   }
 
@@ -221,11 +258,11 @@ export function getTimelineBounds(
   const earliest = Math.min(...starts);
   const latest = Math.max(...ends);
   const startMinutes = clampMinutes(Math.min(
-    DEFAULT_TIMELINE_START_MINUTES,
+    fallbackStart,
     floorToSlot(earliest - SLOT_MINUTES),
   ));
   const endMinutes = clampMinutes(Math.max(
-    DEFAULT_TIMELINE_END_MINUTES,
+    ceilToSlot(fallbackEnd + SLOT_MINUTES),
     ceilToSlot(latest + SLOT_MINUTES),
   ));
 

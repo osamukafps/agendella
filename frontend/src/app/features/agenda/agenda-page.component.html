@@ -21,16 +21,24 @@
         <div class="agenda-board__title">
           <p class="agenda-board__kicker">{{ scope === 'mine' ? 'Minha agenda' : 'Agenda real' }}</p>
           <h2 id="timeline-title">{{ dayLabel() }}</h2>
+          <p class="agenda-board__hours">Funcionamento do dia: {{ selectedDayBusinessHoursLabel() }}</p>
+          @if (showCreateAction()) {
+            <button class="agenda-create-button agenda-create-button--inline" type="button" (click)="openCreateSheet()">
+              Novo agendamento
+            </button>
+          }
         </div>
 
-        <div class="week-nav" aria-label="Navegação semanal">
-          <button class="week-nav__button" type="button" (click)="goToPreviousWeek()">
-            Semana anterior
-          </button>
-          <span class="week-nav__label">{{ weekRangeLabel() }}</span>
-          <button class="week-nav__button" type="button" (click)="goToNextWeek()">
-            Próxima semana
-          </button>
+        <div class="agenda-board__controls">
+          <div class="week-nav" aria-label="Navegação semanal">
+            <button class="week-nav__button" type="button" (click)="goToPreviousWeek()">
+              Semana anterior
+            </button>
+            <span class="week-nav__label">{{ weekRangeLabel() }}</span>
+            <button class="week-nav__button" type="button" (click)="goToNextWeek()">
+              Próxima semana
+            </button>
+          </div>
         </div>
       </header>
 
@@ -148,6 +156,7 @@
         <div class="day-summary">
           <p>{{ summaryLead() }}</p>
           <p>{{ summarySecondary() }}</p>
+          <p><strong>Funcionamento:</strong> {{ selectedDayBusinessHoursLabel() }}</p>
         </div>
 
         <div class="metric-grid">
@@ -178,4 +187,27 @@
       </section>
     </aside>
   </div>
+
+  @if (showCreateAction()) {
+    <button
+      type="button"
+      class="agenda-create-fab"
+      (click)="openCreateSheet()"
+      aria-label="Criar novo agendamento"
+    >
+      Novo agendamento
+    </button>
+  }
+
+  @if (isCreateSheetOpen()) {
+    <div class="agenda-sheet-backdrop" (click)="closeCreateSheet()" aria-hidden="true"></div>
+    <section class="agenda-sheet" aria-label="Criar novo agendamento">
+      <app-appointment-form
+        [mode]="'create'"
+        [preferredDate]="selectedDate()"
+        (saved)="handleAppointmentCreated($event)"
+        (cancelled)="closeCreateSheet()"
+      />
+    </section>
+  }
 </section>
