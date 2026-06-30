@@ -5,22 +5,19 @@ import { ClientsApiService } from '../clients/clients-api.service';
 import { ProfessionalsApiService } from '../professionals/professionals-api.service';
 import { ServicesApiService } from '../services/services-api.service';
 import { SalonSettingsApiService } from '../salon-settings/salon-settings-api.service';
-import { AppointmentCardComponent } from './appointment-card.component';
 import { AppointmentFormComponent } from './appointment-form.component';
 import { AppointmentActionsComponent } from './appointment-actions.component';
 import { ShellTopbarService } from '../../core/layout/shell-topbar.service';
 import { getApiErrorMessage } from '../../core/api/api-error.utils';
 import { collectCursorPages } from '../../core/api/cursor-pagination';
 import {
+  DEFAULT_TIMELINE_START_MINUTES,
   buildAgendaAppointments,
   buildAgendaLookupMaps,
-  buildAgendaSummary,
-  buildTimelineSlots,
   formatAgendaDateLabel,
   formatBusinessHoursLabel,
   getApiDayOfWeek,
-  getNowMarkerTop,
-  getTimelineBounds,
+  getStatusBadgeClass,
   getWeekDays,
   hasAnyAction,
   isSameLocalDay,
@@ -32,8 +29,6 @@ import {
 import type {
   AgendaAppointmentViewModel,
   AgendaLookupMaps,
-  TimelineBounds,
-  WeekDay,
 } from './agenda-utils';
 import type {
   AppointmentResponse,
@@ -46,13 +41,7 @@ import type {
 const AGENDA_PAGE_SIZE = 100;
 
 type AppointmentMutationAction = 'complete' | 'no-show' | 'cancel' | 'resolve-review';
-
-interface SummaryCardViewModel {
-  id: string;
-  label: string;
-  value: string;
-  detail: string;
-}
+type AgendaViewMode = 'day' | 'week' | 'month';
 
 interface ActionConfirmationCopy {
   title: string;
@@ -62,28 +51,47 @@ interface ActionConfirmationCopy {
   fallbackError: string;
 }
 
-function minutesFromDate(date: Date): number {
-  return date.getHours() * 60 + date.getMinutes();
+interface AgendaViewOption {
+  id: AgendaViewMode;
+  label: string;
 }
 
-function formatWeekRange(days: WeekDay[]): string {
-  if (days.length === 0) {
-    return '';
-  }
-
-  const formatter = new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-  });
-
-  const first = formatter.format(parseApiDate(days[0].date));
-  const last = formatter.format(parseApiDate(days[days.length - 1].date));
-  return `${first} - ${last}`;
+interface AgendaAppointmentGroup {
+  id: string;
+  label: string;
+  items: AgendaAppointmentViewModel[];
 }
 
 function lastLocalAppointmentDate(appointments: AppointmentResponse[]): string | null {
   const last = appointments[appointments.length - 1];
   return last ? toApiDate(new Date(last.startAtUtc)) : null;
+}
+
+function countLabel(total: number): string {
+  return `${total} atendimento${total === 1 ? '' : 's'}`;
+}
+
+function formatMonthLabel(dateStr: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(parseApiDate(dateStr));
+}
+
+function startOfMonthApiDate(dateStr: string): string {
+  const date = parseApiDate(dateStr);
+  return toApiDate(new Date(date.getFullYear(), date.getMonth(), 1, 12));
+}
+
+function endOfMonthApiDate(dateStr: string): string {
+  const date = parseApiDate(dateStr);
+  return toApiDate(new Date(date.getFullYear(), date.getMonth() + 1, 0, 12));
+}
+
+function shiftApiMonth(dateStr: string, months: number): string {
+  const date = parseApiDate(dateStr);
+  date.setMonth(date.getMonth() + months);
+  return toApiDate(date);
 }
 
 function buildActionConfirmationCopy(
@@ -129,7 +137,7 @@ function buildActionConfirmationCopy(
 @Component({
   selector: 'app-agenda-page',
   standalone: true,
-  imports: [AppointmentCardComponent, AppointmentFormComponent, AppointmentActionsComponent],
+  imports: [AppointmentFormComponent, AppointmentActionsComponent],
   templateUrl: './agenda-page.component.html',
   styleUrl: './agenda-page.component.scss',
 })
@@ -151,6 +159,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
 
   protected readonly currentRole = this.authService.role;
   protected readonly selectedDate = signal(todayApiDate());
+  protected readonly viewMode = signal<AgendaViewMode>('day');
   protected readonly isLoading = signal(false);
   protected readonly hasLoadedOnce = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -164,6 +173,11 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
   protected readonly appointments = signal<AppointmentResponse[]>([]);
   protected readonly businessHours = signal<BusinessHourDto[]>([]);
   protected readonly lookupMaps = signal<AgendaLookupMaps>(buildAgendaLookupMaps([], [], []));
+  protected readonly viewOptions: AgendaViewOption[] = [
+    { id: 'day', label: 'Dia' },
+    { id: 'week', label: 'Semana' },
+    { id: 'month', label: 'Mês' },
+  ];
   protected readonly statusLegend = [
     { id: 'scheduled', label: 'Agendado', color: 'var(--color-primary)' },
     { id: 'completed', label: 'Concluído', color: 'var(--color-neutral-400)' },
@@ -205,123 +219,148 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
   });
 
   protected readonly weekDays = computed(() => getWeekDays(parseApiDate(this.selectedDate())));
-  protected readonly weekRangeLabel = computed(() => formatWeekRange(this.weekDays()));
-  protected readonly dayLabel = computed(() => formatAgendaDateLabel(this.selectedDate()));
+  protected readonly weekRangeLabel = computed(() => {
+    const days = this.weekDays();
+    if (days.length === 0) {
+      return '';
+    }
+
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+    });
+
+    const first = formatter.format(parseApiDate(days[0].date));
+    const last = formatter.format(parseApiDate(days[days.length - 1].date));
+    return `${first} - ${last}`;
+  });
   protected readonly selectedDayBusinessHours = computed(() =>
     this.businessHours().find(hour => hour.dayOfWeek === getApiDayOfWeek(this.selectedDate())) ?? null
   );
   protected readonly selectedDayBusinessHoursLabel = computed(() =>
     formatBusinessHoursLabel(this.selectedDayBusinessHours())
   );
-  protected readonly isCurrentDayView = computed(() => this.selectedDate() === todayApiDate());
-  protected readonly currentTimeLabel = computed(() =>
-    new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(this.currentDateTime())
-  );
 
-  protected readonly selectedDayAppointments = computed(() =>
-    this.appointments().filter(appointment => isSameLocalDay(appointment.startAtUtc, this.selectedDate()))
-  );
-
-  protected readonly timelineBounds = computed<TimelineBounds>(() =>
-    getTimelineBounds(
-      this.selectedDayAppointments(),
-      this.isCurrentDayView(),
-      this.selectedDayBusinessHours(),
-      this.currentDateTime(),
-    )
-  );
-
-  protected readonly timeSlots = computed(() => buildTimelineSlots(this.timelineBounds()));
-
-  protected readonly showNowMarker = computed(() => {
-    if (!this.isCurrentDayView()) {
-      return false;
-    }
-
-    const nowMinutes = minutesFromDate(this.currentDateTime());
-    return nowMinutes >= this.timelineBounds().startMinutes
-      && nowMinutes <= this.timelineBounds().endMinutes;
-  });
-
-  protected readonly nowLineTop = computed(() =>
-    getNowMarkerTop(this.timelineBounds(), this.currentDateTime())
-  );
-
-  protected readonly visibleAppointments = computed<AgendaAppointmentViewModel[]>(() =>
+  protected readonly agendaItems = computed<AgendaAppointmentViewModel[]>(() =>
     buildAgendaAppointments(
-      this.selectedDayAppointments(),
+      this.appointments(),
       this.lookupMaps(),
-      this.timelineBounds().startMinutes,
+      DEFAULT_TIMELINE_START_MINUTES,
     )
   );
 
-  protected readonly summary = computed(() =>
-    buildAgendaSummary(this.visibleAppointments(), this.currentDateTime())
-  );
+  protected readonly currentViewItems = computed<AgendaAppointmentViewModel[]>(() => {
+    const items = this.agendaItems();
+    const selectedDate = this.selectedDate();
+    const mode = this.viewMode();
 
-  protected readonly summaryCards = computed<SummaryCardViewModel[]>(() => {
-    const summary = this.summary();
-
-    return [
-      {
-        id: 'total',
-        label: 'Atendimentos',
-        value: String(summary.total),
-        detail: 'no dia selecionado',
-      },
-      {
-        id: 'scheduled',
-        label: 'Agendados',
-        value: String(summary.statusCounts.Scheduled),
-        detail: 'ainda previstos',
-      },
-      {
-        id: 'completed',
-        label: 'Concluídos',
-        value: String(summary.statusCounts.Completed),
-        detail: 'já finalizados',
-      },
-      {
-        id: 'review',
-        label: 'Revisão',
-        value: String(summary.requiresReview),
-        detail: 'pedem atenção',
-      },
-    ];
-  });
-
-  protected readonly summaryLead = computed(() => {
-    const total = this.summary().total;
-    if (total === 0) {
-      return 'Nenhum atendimento encontrado para o dia selecionado.';
+    if (mode === 'day') {
+      return items.filter(item => isSameLocalDay(item.startAtUtc, selectedDate));
     }
 
-    const next = this.summary().nextAppointment;
-    if (!next) {
-      return `${total} atendimento${total === 1 ? '' : 's'} real${total === 1 ? '' : 'es'} neste dia.`;
+    if (mode === 'week') {
+      const weekStart = this.weekDays()[0]?.date ?? selectedDate;
+      const weekEnd = this.weekDays()[this.weekDays().length - 1]?.date ?? selectedDate;
+      return items.filter(item => {
+        const itemDate = toApiDate(new Date(item.startAtUtc));
+        return itemDate >= weekStart && itemDate <= weekEnd;
+      });
     }
 
-    return `Próximo destaque às ${next.startTimeLabel} com ${next.clientName}.`;
+    const monthStart = startOfMonthApiDate(selectedDate);
+    const monthEnd = endOfMonthApiDate(selectedDate);
+    return items.filter(item => {
+      const itemDate = toApiDate(new Date(item.startAtUtc));
+      return itemDate >= monthStart && itemDate <= monthEnd;
+    });
   });
 
-  protected readonly summarySecondary = computed(() => {
-    const items = this.visibleAppointments();
-    if (items.length === 0) {
-      return 'Troque o dia na semana para consultar outras datas.';
+  protected readonly currentViewGroups = computed<AgendaAppointmentGroup[]>(() => {
+    if (this.viewMode() === 'day') {
+      return [];
     }
 
-    const first = items[0];
-    const last = items[items.length - 1];
-    return `Janela do dia entre ${first.startTimeLabel} e ${last.endTimeLabel}.`;
+    const groups = new Map<string, AgendaAppointmentViewModel[]>();
+
+    this.currentViewItems().forEach(item => {
+      const date = toApiDate(new Date(item.startAtUtc));
+      const bucket = groups.get(date);
+      if (bucket) {
+        bucket.push(item);
+        return;
+      }
+
+      groups.set(date, [item]);
+    });
+
+    return [...groups.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([date, items]) => ({
+        id: date,
+        label: formatAgendaDateLabel(date),
+        items,
+      }));
   });
 
-  protected readonly statusBreakdown = computed(() => [
-    { id: 'scheduled', label: 'Agendados', value: this.summary().statusCounts.Scheduled },
-    { id: 'completed', label: 'Concluídos', value: this.summary().statusCounts.Completed },
-    { id: 'cancelled', label: 'Cancelados', value: this.summary().statusCounts.Cancelled },
-    { id: 'no-show', label: 'Não compareceu', value: this.summary().statusCounts.NoShow },
-    { id: 'review', label: 'Requer revisão', value: this.summary().requiresReview },
-  ]);
+  protected readonly headingEyebrow = computed(() => {
+    switch (this.viewMode()) {
+      case 'day':
+        return 'Agenda do dia';
+      case 'week':
+        return 'Agenda da semana';
+      case 'month':
+        return 'Agenda do mês';
+    }
+  });
+
+  protected readonly headingTitle = computed(() => {
+    const total = this.currentViewItems().length;
+    const totalLabel = countLabel(total);
+
+    switch (this.viewMode()) {
+      case 'day':
+        return this.selectedDate() === todayApiDate()
+          ? `Hoje · ${totalLabel}`
+          : `${formatAgendaDateLabel(this.selectedDate())} · ${totalLabel}`;
+      case 'week':
+        return `Semana · ${totalLabel}`;
+      case 'month':
+        return `${formatMonthLabel(this.selectedDate())} · ${totalLabel}`;
+    }
+  });
+
+  protected readonly currentPeriodLabel = computed(() => {
+    switch (this.viewMode()) {
+      case 'day':
+        return formatAgendaDateLabel(this.selectedDate());
+      case 'week':
+        return this.weekRangeLabel();
+      case 'month':
+        return formatMonthLabel(this.selectedDate());
+    }
+  });
+
+  protected readonly emptyStateTitle = computed(() => {
+    switch (this.viewMode()) {
+      case 'day':
+        return 'Nenhum atendimento neste dia';
+      case 'week':
+        return 'Nenhum atendimento nesta semana';
+      case 'month':
+        return 'Nenhum atendimento neste mês';
+    }
+  });
+
+  protected readonly emptyStateMessage = computed(() => {
+    switch (this.viewMode()) {
+      case 'day':
+        return 'Escolha outra data ou crie um novo agendamento para preencher a agenda do dia.';
+      case 'week':
+        return 'Avance ou volte o período para consultar outros atendimentos da semana.';
+      case 'month':
+        return 'Altere o mês para consultar outros atendimentos ou criar novos horários.';
+    }
+  });
 
   async ngOnInit(): Promise<void> {
     this.syncTopbarAction();
@@ -349,22 +388,44 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  protected async selectDay(date: string): Promise<void> {
-    if (date === this.selectedDate()) {
+  protected async setViewMode(mode: AgendaViewMode): Promise<void> {
+    if (mode === this.viewMode()) {
       return;
     }
 
-    this.selectedDate.set(date);
+    this.viewMode.set(mode);
     await this.ensureAgendaCoverage();
   }
 
-  protected async goToPreviousWeek(): Promise<void> {
-    this.selectedDate.set(shiftApiDate(this.selectedDate(), -7));
+  protected async goToPreviousPeriod(): Promise<void> {
+    switch (this.viewMode()) {
+      case 'day':
+        this.selectedDate.set(shiftApiDate(this.selectedDate(), -1));
+        break;
+      case 'week':
+        this.selectedDate.set(shiftApiDate(this.selectedDate(), -7));
+        break;
+      case 'month':
+        this.selectedDate.set(shiftApiMonth(this.selectedDate(), -1));
+        break;
+    }
+
     await this.ensureAgendaCoverage();
   }
 
-  protected async goToNextWeek(): Promise<void> {
-    this.selectedDate.set(shiftApiDate(this.selectedDate(), 7));
+  protected async goToNextPeriod(): Promise<void> {
+    switch (this.viewMode()) {
+      case 'day':
+        this.selectedDate.set(shiftApiDate(this.selectedDate(), 1));
+        break;
+      case 'week':
+        this.selectedDate.set(shiftApiDate(this.selectedDate(), 7));
+        break;
+      case 'month':
+        this.selectedDate.set(shiftApiMonth(this.selectedDate(), 1));
+        break;
+    }
+
     await this.ensureAgendaCoverage();
   }
 
@@ -384,7 +445,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
       await this.loadLookups();
       this.appointments.set([]);
       this.nextAppointmentsCursor.set(undefined);
-      await this.loadAppointmentsUntilWeekEnd();
+      await this.loadAppointmentsUntilTargetDate();
       this.hasLoadedOnce.set(true);
     } catch (error) {
       this.error.set(getApiErrorMessage(error, 'Não foi possível carregar a agenda agora.'));
@@ -533,6 +594,43 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     return hasAnyAction(appointment.appointment, this.currentRole());
   }
 
+  protected getStatusBadgeClass(appointment: AgendaAppointmentViewModel): string {
+    return getStatusBadgeClass(
+      appointment.appointment.status,
+      appointment.appointment.requiresReview,
+    );
+  }
+
+  protected getStatusTone(appointment: AgendaAppointmentViewModel): string {
+    if (appointment.appointment.requiresReview) {
+      return 'review';
+    }
+
+    switch (appointment.appointment.status) {
+      case 'Completed':
+        return 'completed';
+      case 'Cancelled':
+        return 'cancelled';
+      case 'NoShow':
+        return 'noshow';
+      default:
+        return 'scheduled';
+    }
+  }
+
+  protected getClientInitials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      return 'CL';
+    }
+
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+
   private resetAppointmentOverlays(): void {
     this.actionSheetAppointment.set(null);
     this.rescheduleSheetAppointment.set(null);
@@ -546,7 +644,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.isWeekCovered()) {
+    if (this.isTargetCovered()) {
       return;
     }
 
@@ -554,7 +652,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     this.error.set(null);
 
     try {
-      await this.loadAppointmentsUntilWeekEnd();
+      await this.loadAppointmentsUntilTargetDate();
       this.hasLoadedOnce.set(true);
     } catch (error) {
       this.error.set(getApiErrorMessage(error, 'Não foi possível atualizar a agenda.'));
@@ -563,19 +661,28 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private isWeekCovered(): boolean {
+  private getTargetCoverageDate(): string {
+    switch (this.viewMode()) {
+      case 'day':
+        return this.selectedDate();
+      case 'week':
+        return this.weekDays()[this.weekDays().length - 1]?.date ?? this.selectedDate();
+      case 'month':
+        return endOfMonthApiDate(this.selectedDate());
+    }
+  }
+
+  private isTargetCovered(): boolean {
     if (this.nextAppointmentsCursor() === null) {
       return true;
     }
 
     const loadedUntil = lastLocalAppointmentDate(this.appointments());
-    const weekEndDate = this.weekDays()[this.weekDays().length - 1]?.date ?? this.selectedDate();
-
     if (!loadedUntil) {
       return false;
     }
 
-    return loadedUntil >= weekEndDate;
+    return loadedUntil >= this.getTargetCoverageDate();
   }
 
   private async loadLookups(): Promise<void> {
@@ -620,11 +727,11 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     return result.items;
   }
 
-  private async loadAppointmentsUntilWeekEnd(): Promise<void> {
-    const weekEndDate = this.weekDays()[this.weekDays().length - 1]?.date ?? this.selectedDate();
+  private async loadAppointmentsUntilTargetDate(): Promise<void> {
+    const targetDate = this.getTargetCoverageDate();
     const currentAppointments = this.appointments();
 
-    if (currentAppointments.length > 0 && this.isWeekCovered()) {
+    if (currentAppointments.length > 0 && this.isTargetCovered()) {
       return;
     }
 
@@ -639,7 +746,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
           }
 
           const loadedUntil = lastLocalAppointmentDate(items);
-          return loadedUntil !== null && loadedUntil >= weekEndDate;
+          return loadedUntil !== null && loadedUntil >= targetDate;
         },
       },
     );

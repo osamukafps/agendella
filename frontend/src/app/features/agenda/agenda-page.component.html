@@ -1,183 +1,193 @@
 <section class="agenda-page" aria-label="Agenda">
-  <div class="agenda-layout">
-    <section class="agenda-board" aria-labelledby="timeline-title">
-      <header class="agenda-board__header">
-        <div class="agenda-board__title">
-          <p class="agenda-board__kicker">{{ scope === 'mine' ? 'Minha agenda' : 'Agenda real' }}</p>
-          <h2 id="timeline-title">{{ dayLabel() }}</h2>
+  <section class="agenda-board" aria-labelledby="agenda-title">
+    <header class="agenda-board__header">
+      <div class="agenda-board__heading">
+        <p class="agenda-board__kicker">{{ headingEyebrow() }}</p>
+        <h2 id="agenda-title">{{ headingTitle() }}</h2>
+        <p class="agenda-board__period">{{ currentPeriodLabel() }}</p>
+        @if (viewMode() === 'day') {
           <p class="agenda-board__hours">Funcionamento do dia: {{ selectedDayBusinessHoursLabel() }}</p>
-        </div>
-
-        <div class="agenda-board__controls">
-          <div class="week-nav" aria-label="Navegação semanal">
-            <button class="week-nav__button" type="button" (click)="goToPreviousWeek()">
-              Semana anterior
-            </button>
-            <span class="week-nav__label">{{ weekRangeLabel() }}</span>
-            <button class="week-nav__button" type="button" (click)="goToNextWeek()">
-              Próxima semana
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div class="day-selector" aria-label="Dias da semana">
-        @for (day of weekDays(); track day.date) {
-          <button
-            class="day-chip"
-            type="button"
-            [class.day-chip--selected]="selectedDate() === day.date"
-            [class.day-chip--today]="day.isToday"
-            [attr.aria-pressed]="selectedDate() === day.date"
-            (click)="selectDay(day.date)"
-          >
-            <span class="day-chip__weekday">{{ day.abbr }}</span>
-            <span class="day-chip__day">{{ day.num }}</span>
-          </button>
         }
       </div>
 
-      <div class="agenda-summary agenda-summary--mobile" aria-label="Resumo do dia">
-        @for (metric of summaryCards(); track metric.id) {
-          <article class="metric-card">
-            <span class="metric-card__label">{{ metric.label }}</span>
-            <strong>{{ metric.value }}</strong>
-            <p>{{ metric.detail }}</p>
-          </article>
-        }
-      </div>
+      <div class="agenda-board__toolbar">
+        <div class="agenda-view-switcher" role="tablist" aria-label="Visualização da agenda">
+          @for (option of viewOptions; track option.id) {
+            <button
+              type="button"
+              class="agenda-view-switcher__button"
+              [class.agenda-view-switcher__button--active]="viewMode() === option.id"
+              [attr.aria-selected]="viewMode() === option.id"
+              (click)="setViewMode(option.id)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
 
-      <ul class="status-legend" aria-label="Legenda de status">
-        @for (status of statusLegend; track status.id) {
-          <li>
-            <span class="status-legend__dot" [style.--legend-color]="status.color"></span>
-            <span>{{ status.label }}</span>
-          </li>
-        }
-      </ul>
-
-      @if (error()) {
-        <div class="agenda-feedback" role="alert">
-          <span>{{ error() }}</span>
-          <button type="button" class="agenda-feedback__button" (click)="refreshAgenda()">
-            Tentar novamente
+        <div class="agenda-period-nav" aria-label="Navegação de período">
+          <button type="button" class="agenda-period-nav__button" (click)="goToPreviousPeriod()">
+            Anterior
+          </button>
+          <span class="agenda-period-nav__label">{{ currentPeriodLabel() }}</span>
+          <button type="button" class="agenda-period-nav__button" (click)="goToNextPeriod()">
+            Próximo
           </button>
         </div>
+      </div>
+    </header>
+
+    <ul class="status-legend" aria-label="Legenda de status">
+      @for (status of statusLegend; track status.id) {
+        <li>
+          <span class="status-legend__dot" [style.--legend-color]="status.color"></span>
+          <span>{{ status.label }}</span>
+        </li>
       }
+    </ul>
 
-      <div class="timeline-wrapper">
-        @if (isLoading() && !hasLoadedOnce()) {
-          <div class="timeline-skeleton" aria-hidden="true">
-            @for (item of [1, 2, 3, 4]; track item) {
-              <div class="timeline-skeleton__row"></div>
-            }
-          </div>
-        } @else if (isMineUnavailable()) {
-          <div class="timeline-state" role="status">
-            <h3>Agenda pessoal indisponível</h3>
-            <p>Sua conta atual não está vinculada a uma profissional para usar <code>/minha-agenda</code>.</p>
-          </div>
-        } @else if (!visibleAppointments().length) {
-          <div class="timeline-state" role="status">
-            <h3>Nenhum agendamento neste dia</h3>
-            <p>Escolha outro dia da semana para consultar a agenda real carregada pelo sistema.</p>
-          </div>
-        } @else {
-          <div
-            class="timeline"
-            [style.--slot-count]="timelineBounds().slotCount"
-            [attr.aria-label]="'Timeline de agendamentos de ' + dayLabel()"
-            role="list"
-          >
-            @for (slot of timeSlots(); track slot.time) {
-              <div
-                class="timeline__slot"
-                [class.timeline__slot--hour]="slot.isHour"
-                [style.grid-row]="slot.gridRow"
-              >
-                @if (slot.label) {
-                  <time class="timeline__time" [attr.datetime]="slot.time">
-                    <span class="timeline__time-dot" aria-hidden="true"></span>
-                    {{ slot.label }}
-                  </time>
+    @if (error()) {
+      <div class="agenda-feedback" role="alert">
+        <span>{{ error() }}</span>
+        <button type="button" class="agenda-feedback__button" (click)="refreshAgenda()">
+          Tentar novamente
+        </button>
+      </div>
+    }
+
+    @if (isLoading() && !hasLoadedOnce()) {
+      <div class="agenda-list agenda-list--skeleton" aria-hidden="true">
+        @for (item of [1, 2, 3, 4, 5]; track item) {
+          <div class="agenda-item agenda-item--skeleton"></div>
+        }
+      </div>
+    } @else if (isMineUnavailable()) {
+      <div class="agenda-state" role="status">
+        <h3>Agenda pessoal indisponível</h3>
+        <p>Sua conta atual não está vinculada a uma profissional para usar <code>/minha-agenda</code>.</p>
+      </div>
+    } @else if (!currentViewItems().length) {
+      <div class="agenda-state" role="status">
+        <h3>{{ emptyStateTitle() }}</h3>
+        <p>{{ emptyStateMessage() }}</p>
+      </div>
+    } @else {
+      @if (viewMode() === 'day') {
+        <div class="agenda-list" role="list">
+          @for (appointment of currentViewItems(); track appointment.id) {
+            <article
+              class="agenda-item"
+              [class.agenda-item--interactive]="hasAppointmentActions(appointment)"
+              [class]="'agenda-item--' + getStatusTone(appointment)"
+              role="listitem"
+            >
+              <span class="agenda-item__accent" aria-hidden="true"></span>
+
+              <div class="agenda-item__time">
+                <span>{{ appointment.startTimeLabel }}</span>
+              </div>
+
+              <div class="agenda-item__avatar">
+                {{ getClientInitials(appointment.clientName) }}
+              </div>
+
+              <div class="agenda-item__content">
+                <strong>{{ appointment.clientName }}</strong>
+                <p>{{ appointment.serviceName }} · {{ appointment.professionalName }}</p>
+                @if (appointment.appointment.requiresReview) {
+                  <span class="agenda-item__review">
+                    Requer revisão
+                    @if (appointment.appointment.reviewReason) {
+                      · {{ appointment.appointment.reviewReason }}
+                    }
+                  </span>
                 }
               </div>
-            }
 
-            @if (showNowMarker()) {
-              <div
-                class="timeline__now"
-                [style.--now-top]="nowLineTop()"
-                [attr.aria-label]="'Agora · ' + currentTimeLabel()"
-                [attr.title]="'Agora · ' + currentTimeLabel()"
-              >
-                <span class="timeline__now-dot"></span>
-                <span class="timeline__now-label">Agora · {{ currentTimeLabel() }}</span>
+              <div class="agenda-item__side">
+                <span class="agenda-status-chip" [class]="getStatusBadgeClass(appointment)">
+                  {{ appointment.statusLabel }}
+                </span>
+
+                @if (hasAppointmentActions(appointment)) {
+                  <button
+                    type="button"
+                    class="agenda-item__action"
+                    [attr.aria-label]="'Abrir ações para ' + appointment.clientName + ' às ' + appointment.startTimeLabel"
+                    (click)="openAppointmentActions(appointment)"
+                  >
+                    Ações
+                  </button>
+                }
               </div>
-            }
-
-            @for (appointment of visibleAppointments(); track appointment.id) {
-              <div
-                class="timeline__appointment"
-                [style.top.px]="appointment.layout.topPx"
-                [style.height.px]="appointment.layout.heightPx"
-                [style.--appointment-lane-index]="appointment.layout.laneIndex"
-                [style.--appointment-lane-count]="appointment.layout.laneCount"
-                role="listitem"
-              >
-                <app-appointment-card
-                  [appointment]="appointment"
-                  [showActionTrigger]="hasAppointmentActions(appointment)"
-                  (actionRequested)="openAppointmentActions(appointment)"
-                />
-              </div>
-            }
-          </div>
-        }
-      </div>
-    </section>
-
-    <aside class="agenda-sidebar" aria-label="Resumo real da agenda">
-      <section class="sidebar-card">
-        <header class="sidebar-card__header">
-          <p>{{ scope === 'mine' ? 'Minha agenda' : 'Resumo do dia' }}</p>
-          <h2>{{ summary().total }} atendimento{{ summary().total === 1 ? '' : 's' }}</h2>
-        </header>
-
-        <div class="day-summary">
-          <p>{{ summaryLead() }}</p>
-          <p>{{ summarySecondary() }}</p>
-          <p><strong>Funcionamento:</strong> {{ selectedDayBusinessHoursLabel() }}</p>
-        </div>
-
-        <div class="metric-grid">
-          @for (metric of summaryCards(); track metric.id) {
-            <article class="metric-card">
-              <span class="metric-card__label">{{ metric.label }}</span>
-              <strong>{{ metric.value }}</strong>
-              <p>{{ metric.detail }}</p>
             </article>
           }
         </div>
-      </section>
+      } @else {
+        <div class="agenda-groups">
+          @for (group of currentViewGroups(); track group.id) {
+            <section class="agenda-group" [attr.aria-labelledby]="'group-' + group.id">
+              <header class="agenda-group__header">
+                <h3 [id]="'group-' + group.id">{{ group.label }}</h3>
+                <span>{{ group.items.length }} atendimento{{ group.items.length === 1 ? '' : 's' }}</span>
+              </header>
 
-      <section class="sidebar-card sidebar-card--accent">
-        <header class="sidebar-card__header">
-          <p>Status do dia</p>
-          <h2>Distribuição derivada do sistema</h2>
-        </header>
+              <div class="agenda-list" role="list">
+                @for (appointment of group.items; track appointment.id) {
+                  <article
+                    class="agenda-item"
+                    [class.agenda-item--interactive]="hasAppointmentActions(appointment)"
+                    [class]="'agenda-item--' + getStatusTone(appointment)"
+                    role="listitem"
+                  >
+                    <span class="agenda-item__accent" aria-hidden="true"></span>
 
-        <ul class="insight-list">
-          @for (item of statusBreakdown(); track item.id) {
-            <li>
-              <span class="insight-list__bullet" aria-hidden="true"></span>
-              <p>{{ item.label }} <strong>{{ item.value }}</strong></p>
-            </li>
+                    <div class="agenda-item__time">
+                      <span>{{ appointment.startTimeLabel }}</span>
+                    </div>
+
+                    <div class="agenda-item__avatar">
+                      {{ getClientInitials(appointment.clientName) }}
+                    </div>
+
+                    <div class="agenda-item__content">
+                      <strong>{{ appointment.clientName }}</strong>
+                      <p>{{ appointment.serviceName }} · {{ appointment.professionalName }}</p>
+                      @if (appointment.appointment.requiresReview) {
+                        <span class="agenda-item__review">
+                          Requer revisão
+                          @if (appointment.appointment.reviewReason) {
+                            · {{ appointment.appointment.reviewReason }}
+                          }
+                        </span>
+                      }
+                    </div>
+
+                    <div class="agenda-item__side">
+                      <span class="agenda-status-chip" [class]="getStatusBadgeClass(appointment)">
+                        {{ appointment.statusLabel }}
+                      </span>
+
+                      @if (hasAppointmentActions(appointment)) {
+                        <button
+                          type="button"
+                          class="agenda-item__action"
+                          [attr.aria-label]="'Abrir ações para ' + appointment.clientName + ' às ' + appointment.startTimeLabel"
+                          (click)="openAppointmentActions(appointment)"
+                        >
+                          Ações
+                        </button>
+                      }
+                    </div>
+                  </article>
+                }
+              </div>
+            </section>
           }
-        </ul>
-      </section>
-    </aside>
-  </div>
+        </div>
+      }
+    }
+  </section>
 
   @if (showCreateAction()) {
     <button
