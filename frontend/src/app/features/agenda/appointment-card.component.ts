@@ -1,6 +1,9 @@
 import { Component, Input } from '@angular/core';
-import { getStatusLabel, getStatusBadgeClass } from './agenda-utils';
-import type { AppointmentResponse } from '../../core/api/api.models';
+import {
+  getStatusBadgeClass,
+  getStatusCardClass,
+} from './agenda-utils';
+import type { AgendaAppointmentViewModel } from './agenda-utils';
 
 @Component({
   selector: 'app-appointment-card',
@@ -8,81 +11,147 @@ import type { AppointmentResponse } from '../../core/api/api.models';
   template: `
     <article
       class="appt-card"
-      [class.appt-card--review]="appt.requiresReview"
-      [class.appt-card--done]="isDone"
+      [class]="cardClass"
+      [attr.aria-label]="appointment.timeRangeLabel + ', ' + appointment.clientName + ', ' + appointment.statusLabel"
     >
-      @if (appt.requiresReview) {
+      @if (appointment.appointment.requiresReview) {
         <div class="review-banner" role="alert" aria-live="polite">
-          <span class="review-badge">⚠ Requer revisão</span>
-          @if (appt.reviewReason) {
-            <span class="review-reason">{{ appt.reviewReason }}</span>
+          <span class="review-badge">Requer revisão</span>
+          @if (appointment.appointment.reviewReason) {
+            <span class="review-reason">{{ appointment.appointment.reviewReason }}</span>
           }
         </div>
       }
 
+      <div class="appt-meta">
+        <time [attr.datetime]="appointment.startAtUtc">
+          {{ appointment.timeRangeLabel }}
+        </time>
+        <span class="appt-badge" [class]="badgeClass">{{ appointment.statusLabel }}</span>
+      </div>
+
       <div class="appt-header">
         <div class="appt-names">
-          <span class="appt-client">{{ clientName }}</span>
-          <span class="appt-service">{{ serviceName }}{{ duration ? ' · ' + duration : '' }}</span>
-          @if (showProfessional && professionalName) {
-            <span class="appt-prof">{{ professionalName }}</span>
-          }
+          <span class="appt-client">{{ appointment.clientName }}</span>
+          <span class="appt-service">{{ appointment.serviceName }} · {{ appointment.durationLabel }}</span>
+          <span class="appt-prof">{{ appointment.professionalName }}</span>
         </div>
-        <span class="appt-badge" [class]="badgeClass">{{ statusLabel }}</span>
       </div>
     </article>
   `,
   styles: [`
     .appt-card {
-      background: var(--color-surface);
+      display: grid;
+      gap: var(--space-2);
+      height: 100%;
+      padding: var(--space-3);
       border: 1px solid var(--color-border);
       border-left: 3px solid var(--color-primary);
       border-radius: 18px;
-      padding: var(--space-4);
+      background: var(--color-surface);
       box-shadow: var(--shadow-sm);
+      overflow: hidden;
     }
-    .appt-card--review {
-      border-left-color: var(--color-warning);
-      border-color: var(--color-border);
-    }
-    .appt-card--done   { opacity: 0.7; }
+    .appt-card--scheduled { border-left-color: var(--color-primary); }
+    .appt-card--completed { border-left-color: var(--color-neutral-400); opacity: 0.78; }
+    .appt-card--cancelled { border-left-color: var(--color-error); }
+    .appt-card--noshow    { border-left-color: var(--color-error); }
+    .appt-card--review    { border-left-color: var(--color-warning); }
     .review-banner {
-      display: flex; align-items: flex-start; gap: var(--space-2);
-      background: var(--color-warning-subtle); border-radius: var(--radius-md);
-      padding: var(--space-2) var(--space-3); margin-bottom: var(--space-2);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      background: var(--color-warning-subtle);
     }
     .review-badge {
-      font-size: var(--text-xs); font-weight: 700; color: var(--color-warning);
+      color: var(--color-warning);
+      font-size: var(--text-xs);
+      font-weight: 700;
       white-space: nowrap;
     }
     .review-reason {
-      font-size: var(--text-xs); color: var(--color-text-secondary); line-height: 1.4;
+      color: var(--color-text-secondary);
+      font-size: var(--text-xs);
+      line-height: 1.4;
     }
-    .appt-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
-    .appt-names  { display: flex; flex-direction: column; gap: 4px; }
-    .appt-client { font-weight: 600; font-size: var(--text-base); color: var(--color-text-primary); line-height: 1.2; }
-    .appt-service { font-size: var(--text-sm); color: var(--color-text-secondary); }
-    .appt-prof   { font-size: var(--text-sm); color: var(--color-text-tertiary); }
+    .appt-meta {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-2);
+      color: var(--color-neutral-600);
+      font-size: var(--text-xs);
+    }
+    .appt-meta time {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .appt-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-2);
+    }
+    .appt-names {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .appt-client {
+      color: var(--color-text-primary);
+      font-size: var(--text-base);
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .appt-service,
+    .appt-prof {
+      line-height: 1.4;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .appt-service {
+      color: var(--color-text-secondary);
+      font-size: var(--text-sm);
+    }
+    .appt-prof {
+      color: var(--color-text-tertiary);
+      font-size: var(--text-sm);
+    }
     .appt-badge  {
-      flex-shrink: 0; font-size: var(--text-xs); font-weight: 600; border-radius: var(--radius-pill);
-      padding: 4px 8px; white-space: nowrap; letter-spacing: 0.05em;
+      flex-shrink: 0;
+      padding: 4px 8px;
+      border-radius: var(--radius-pill);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
     }
     .badge-scheduled { background: var(--color-primary-subtle); color: var(--color-primary); }
     .badge-completed { background: var(--color-neutral-100); color: var(--color-neutral-600); }
     .badge-cancelled { background: var(--color-error-subtle); color: var(--color-error); }
-    .badge-noshow    { background: var(--color-error-subtle);   color: var(--color-error); }
+    .badge-noshow    { background: var(--color-error-subtle); color: var(--color-error); }
     .badge-review    { background: var(--color-warning-subtle); color: var(--color-warning); }
   `],
 })
 export class AppointmentCardComponent {
-  @Input({ required: true }) appt!: AppointmentResponse;
-  @Input({ required: true }) clientName!: string;
-  @Input({ required: true }) serviceName!: string;
-  @Input() professionalName: string | null = null;
-  @Input() showProfessional = false;
-  @Input() duration = '';
+  @Input({ required: true }) appointment!: AgendaAppointmentViewModel;
 
-  get statusLabel(): string { return getStatusLabel(this.appt.status); }
-  get badgeClass(): string  { return getStatusBadgeClass(this.appt.status, this.appt.requiresReview); }
-  get isDone(): boolean     { return this.appt.status !== 'Scheduled'; }
+  get badgeClass(): string {
+    return getStatusBadgeClass(
+      this.appointment.appointment.status,
+      this.appointment.appointment.requiresReview,
+    );
+  }
+
+  get cardClass(): string {
+    return getStatusCardClass(
+      this.appointment.appointment.status,
+      this.appointment.appointment.requiresReview,
+    );
+  }
 }

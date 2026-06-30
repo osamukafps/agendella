@@ -2,36 +2,50 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { AppointmentCardComponent } from './appointment-card.component';
+import { getStatusLabel } from './agenda-utils';
+import type { AgendaAppointmentViewModel } from './agenda-utils';
 import type { AppointmentResponse } from '../../core/api/api.models';
 
 const BASE_APPT: AppointmentResponse = {
-  id: 'appt-1', clientId: 'cli-1', professionalId: 'prof-1', serviceId: 'svc-1',
-  startAtUtc: '2024-06-10T13:00:00Z', endAtUtc: '2024-06-10T14:00:00Z',
-  status: 'Scheduled', requiresReview: false, reviewReason: null,
-  createdAtUtc: '2024-06-10T00:00:00Z', updatedAtUtc: '2024-06-10T00:00:00Z',
+  id: 'appt-1',
+  clientId: 'cli-1',
+  professionalId: 'prof-1',
+  serviceId: 'svc-1',
+  startAtUtc: '2024-06-10T13:00:00Z',
+  endAtUtc: '2024-06-10T14:00:00Z',
+  status: 'Scheduled',
+  requiresReview: false,
+  reviewReason: null,
+  createdAtUtc: '2024-06-10T00:00:00Z',
+  updatedAtUtc: '2024-06-10T00:00:00Z',
 };
 
-function setupComponent(appt: AppointmentResponse, opts: {
-  clientName?: string;
-  serviceName?: string;
-  duration?: string;
-  professionalName?: string | null;
-  showProfessional?: boolean;
-} = {}) {
+function buildVm(appt: AppointmentResponse, overrides: Partial<AgendaAppointmentViewModel> = {}): AgendaAppointmentViewModel {
+  return {
+    id: appt.id,
+    appointment: appt,
+    clientName: 'Maria',
+    serviceName: 'Corte',
+    professionalName: 'Ana Costa',
+    startAtUtc: appt.startAtUtc,
+    endAtUtc: appt.endAtUtc,
+    startTimeLabel: '10:00',
+    endTimeLabel: '11:00',
+    timeRangeLabel: '10:00 - 11:00',
+    durationLabel: '1h',
+    statusLabel: getStatusLabel(appt.status),
+    gridRow: '1 / span 2',
+    ...overrides,
+  };
+}
+
+function setupComponent(appt: AppointmentResponse, overrides: Partial<AgendaAppointmentViewModel> = {}) {
   TestBed.configureTestingModule({ imports: [AppointmentCardComponent] });
   const fixture = TestBed.createComponent(AppointmentCardComponent);
-  const cmp = fixture.componentInstance;
-  cmp.appt = appt;
-  cmp.clientName = opts.clientName ?? 'Maria';
-  cmp.serviceName = opts.serviceName ?? 'Corte';
-  cmp.duration = opts.duration ?? '30 min';
-  if (opts.professionalName !== undefined) cmp.professionalName = opts.professionalName;
-  if (opts.showProfessional !== undefined) cmp.showProfessional = opts.showProfessional;
+  fixture.componentInstance.appointment = buildVm(appt, overrides);
   fixture.detectChanges();
   return fixture;
 }
-
-// ─── Badge de revisão — visibilidade ─────────────────────────────────────────
 
 describe('AppointmentCardComponent — review badge', () => {
   afterEach(() => TestBed.resetTestingModule());
@@ -77,8 +91,6 @@ describe('AppointmentCardComponent — review badge', () => {
   });
 });
 
-// ─── Conteúdo do card ────────────────────────────────────────────────────────
-
 describe('AppointmentCardComponent — conteúdo do card', () => {
   afterEach(() => TestBed.resetTestingModule());
 
@@ -94,18 +106,17 @@ describe('AppointmentCardComponent — conteúdo do card', () => {
     expect(service.nativeElement.textContent).toContain('Manicure');
   });
 
-  it('exibe nome do profissional quando showProfessional é true', () => {
-    const fixture = setupComponent(BASE_APPT, {
-      showProfessional: true, professionalName: 'Ana Costa',
-    });
+  it('exibe o nome do profissional', () => {
+    const fixture = setupComponent(BASE_APPT, { professionalName: 'Ana Costa' });
     const prof = fixture.debugElement.query(By.css('.appt-prof'));
     expect(prof).not.toBeNull();
     expect(prof.nativeElement.textContent).toContain('Ana Costa');
   });
 
-  it('não exibe nome do profissional quando showProfessional é false', () => {
-    const fixture = setupComponent(BASE_APPT, { showProfessional: false, professionalName: 'Ana' });
-    expect(fixture.debugElement.query(By.css('.appt-prof'))).toBeNull();
+  it('exibe a faixa de horário', () => {
+    const fixture = setupComponent(BASE_APPT, { timeRangeLabel: '10:30 - 11:15' });
+    const time = fixture.debugElement.query(By.css('.appt-meta time'));
+    expect(time.nativeElement.textContent).toContain('10:30 - 11:15');
   });
 
   it('badge do status mostra "Agendado" para Scheduled', () => {
@@ -115,7 +126,7 @@ describe('AppointmentCardComponent — conteúdo do card', () => {
   });
 
   it('badge do status mostra "Concluído" para Completed', () => {
-    const fixture = setupComponent({ ...BASE_APPT, status: 'Completed' });
+    const fixture = setupComponent({ ...BASE_APPT, status: 'Completed' }, { statusLabel: 'Concluído' });
     const badge = fixture.debugElement.query(By.css('.appt-badge'));
     expect(badge.nativeElement.textContent).toContain('Concluído');
   });

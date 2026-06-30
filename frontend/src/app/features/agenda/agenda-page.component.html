@@ -2,45 +2,61 @@
   <header class="agenda-hero">
     <div class="agenda-hero__copy">
       <p class="agenda-hero__eyebrow">{{ salonName() }}</p>
-      <h1 id="agenda-heading">Bom dia, {{ greetingName() }}</h1>
-      <p class="agenda-hero__date">{{ dayLabel }}</p>
+      <h1 id="agenda-heading">Bom dia, {{ userName() }}</h1>
+      <p class="agenda-hero__date">{{ dayLabel() }}</p>
     </div>
+
+    @if (summary().nextAppointment && !isLoading() && !isMineUnavailable()) {
+      <div class="agenda-hero__highlight" aria-label="Próximo destaque do dia">
+        <span>Próximo destaque</span>
+        <strong>{{ summary().nextAppointment?.timeRangeLabel }}</strong>
+        <p>{{ summary().nextAppointment?.clientName }} · {{ summary().nextAppointment?.serviceName }}</p>
+      </div>
+    }
   </header>
 
   <div class="agenda-layout">
     <section class="agenda-board" aria-labelledby="timeline-title">
       <header class="agenda-board__header">
         <div class="agenda-board__title">
-          <p class="agenda-board__kicker">Agenda do dia</p>
-          <h2 id="timeline-title">Hoje · {{ appointments.length }} atendimentos</h2>
+          <p class="agenda-board__kicker">{{ scope === 'mine' ? 'Minha agenda' : 'Agenda real' }}</p>
+          <h2 id="timeline-title">{{ dayLabel() }}</h2>
         </div>
 
-        <div class="view-mode" aria-label="Modo de visualização">
-          @for (mode of viewModes; track mode.id) {
-            <button
-              class="view-mode__button"
-              type="button"
-              [class.view-mode__button--active]="mode.active"
-              [attr.aria-pressed]="mode.active"
-            >
-              {{ mode.label }}
-            </button>
-          }
+        <div class="week-nav" aria-label="Navegação semanal">
+          <button class="week-nav__button" type="button" (click)="goToPreviousWeek()">
+            Semana anterior
+          </button>
+          <span class="week-nav__label">{{ weekRangeLabel() }}</span>
+          <button class="week-nav__button" type="button" (click)="goToNextWeek()">
+            Próxima semana
+          </button>
         </div>
       </header>
 
       <div class="day-selector" aria-label="Dias da semana">
-        @for (day of weekDays; track day.id) {
+        @for (day of weekDays(); track day.date) {
           <button
             class="day-chip"
             type="button"
+            [class.day-chip--selected]="selectedDate() === day.date"
             [class.day-chip--today]="day.isToday"
-            [class.day-chip--weekend]="day.isWeekend"
-            [attr.aria-pressed]="day.isToday"
+            [attr.aria-pressed]="selectedDate() === day.date"
+            (click)="selectDay(day.date)"
           >
-            <span class="day-chip__weekday">{{ day.weekday }}</span>
-            <span class="day-chip__day">{{ day.dayNumber }}</span>
+            <span class="day-chip__weekday">{{ day.abbr }}</span>
+            <span class="day-chip__day">{{ day.num }}</span>
           </button>
+        }
+      </div>
+
+      <div class="agenda-summary agenda-summary--mobile" aria-label="Resumo do dia">
+        @for (metric of summaryCards(); track metric.id) {
+          <article class="metric-card">
+            <span class="metric-card__label">{{ metric.label }}</span>
+            <strong>{{ metric.value }}</strong>
+            <p>{{ metric.detail }}</p>
+          </article>
         }
       </div>
 
@@ -53,95 +69,89 @@
         }
       </ul>
 
+      @if (error()) {
+        <div class="agenda-feedback" role="alert">
+          <span>{{ error() }}</span>
+          <button type="button" class="agenda-feedback__button" (click)="refreshAgenda()">
+            Tentar novamente
+          </button>
+        </div>
+      }
+
       <div class="timeline-wrapper">
-        <ol
-          class="timeline"
-          [attr.aria-label]="'Timeline de agendamentos de ' + dayLabel"
-        >
-          @for (slot of timeSlots; track slot.time) {
-            <li
-              class="timeline__slot"
-              [class.timeline__slot--hour]="slot.isHour"
-              [style.grid-row]="slot.gridRow"
-            >
-              @if (slot.label) {
-                <time class="timeline__time" [attr.datetime]="slot.time">
-                  <span class="timeline__time-dot" aria-hidden="true"></span>
-                  {{ slot.label }}
-                </time>
-              }
-            </li>
-          }
-
-          @if (showNowMarker()) {
-            <li
-              class="timeline__now"
-              [style.--now-top]="nowLineTop()"
-              [attr.aria-label]="currentTimeLabel()"
-              [attr.title]="currentTimeLabel()"
-            >
-              <span class="timeline__now-dot"></span>
-              <span class="timeline__now-label">{{ currentTimeLabel() }}</span>
-            </li>
-          }
-
-          @for (appointment of appointments; track appointment.id) {
-            <li class="timeline__appointment" [style.grid-row]="appointment.gridRow">
-              <article
-                class="appointment-card"
-                [class.appointment-card--active]="appointment.statusTone === 'active'"
-                [class.appointment-card--completed]="appointment.statusTone === 'completed'"
-                [class.appointment-card--review]="appointment.statusTone === 'review'"
-                [class.appointment-card--cancelled]="appointment.statusTone === 'cancelled'"
-                [style.--status-color]="appointment.statusColor"
-                [style.--status-bg]="appointment.statusBackground"
-                [attr.aria-label]="appointment.startTime + ', ' + appointment.clientName + ', ' + appointment.statusLabel"
+        @if (isLoading() && !hasLoadedOnce()) {
+          <div class="timeline-skeleton" aria-hidden="true">
+            @for (item of [1, 2, 3, 4]; track item) {
+              <div class="timeline-skeleton__row"></div>
+            }
+          </div>
+        } @else if (isMineUnavailable()) {
+          <div class="timeline-state" role="status">
+            <h3>Agenda pessoal indisponível</h3>
+            <p>Sua conta atual não está vinculada a uma profissional para usar <code>/minha-agenda</code>.</p>
+          </div>
+        } @else if (!visibleAppointments().length) {
+          <div class="timeline-state" role="status">
+            <h3>Nenhum agendamento neste dia</h3>
+            <p>Escolha outro dia da semana para consultar a agenda real carregada pelo sistema.</p>
+          </div>
+        } @else {
+          <ol
+            class="timeline"
+            [style.--slot-count]="timelineBounds().slotCount"
+            [attr.aria-label]="'Timeline de agendamentos de ' + dayLabel()"
+          >
+            @for (slot of timeSlots(); track slot.time) {
+              <li
+                class="timeline__slot"
+                [class.timeline__slot--hour]="slot.isHour"
+                [style.grid-row]="slot.gridRow"
               >
-                <div class="appointment-card__meta">
-                  <time [attr.datetime]="appointment.startTime">
-                    {{ appointment.startTime }} - {{ appointment.endTime }}
+                @if (slot.label) {
+                  <time class="timeline__time" [attr.datetime]="slot.time">
+                    <span class="timeline__time-dot" aria-hidden="true"></span>
+                    {{ slot.label }}
                   </time>
-                  <span class="appointment-card__status">{{ appointment.statusLabel }}</span>
-                </div>
+                }
+              </li>
+            }
 
-                <div class="appointment-card__body">
-                  <h3>{{ appointment.clientName }}</h3>
-                  <p>{{ appointment.serviceName }}</p>
-                  <span>{{ appointment.professionalName }} · {{ appointment.details }}</span>
-                </div>
-              </article>
-            </li>
-          }
-        </ol>
+            @if (showNowMarker()) {
+              <li
+                class="timeline__now"
+                [style.--now-top]="nowLineTop()"
+                [attr.aria-label]="'Agora · ' + currentTimeLabel()"
+                [attr.title]="'Agora · ' + currentTimeLabel()"
+              >
+                <span class="timeline__now-dot"></span>
+                <span class="timeline__now-label">Agora · {{ currentTimeLabel() }}</span>
+              </li>
+            }
+
+            @for (appointment of visibleAppointments(); track appointment.id) {
+              <li class="timeline__appointment" [style.grid-row]="appointment.gridRow">
+                <app-appointment-card [appointment]="appointment" />
+              </li>
+            }
+          </ol>
+        }
       </div>
     </section>
 
-    <aside class="agenda-sidebar" aria-label="Indicadores e insights">
+    <aside class="agenda-sidebar" aria-label="Resumo real da agenda">
       <section class="sidebar-card">
         <header class="sidebar-card__header">
-          <p>Agenda do dia</p>
-          <h2>{{ appointments.length }} atendimentos</h2>
+          <p>{{ scope === 'mine' ? 'Minha agenda' : 'Resumo do dia' }}</p>
+          <h2>{{ summary().total }} atendimento{{ summary().total === 1 ? '' : 's' }}</h2>
         </header>
 
         <div class="day-summary">
-          <p>Maior movimento entre 10h30 e 15h30.</p>
-          <p>Status dominante: <strong>Confirmado e em atendimento.</strong></p>
+          <p>{{ summaryLead() }}</p>
+          <p>{{ summarySecondary() }}</p>
         </div>
-
-        <div class="svg-placeholder">
-          <span>Placeholder SVG</span>
-          <small>Ilustração futura</small>
-        </div>
-      </section>
-
-      <section class="sidebar-card">
-        <header class="sidebar-card__header">
-          <p>Resumo do mês</p>
-          <h2>Indicadores</h2>
-        </header>
 
         <div class="metric-grid">
-          @for (metric of summaryMetrics; track metric.id) {
+          @for (metric of summaryCards(); track metric.id) {
             <article class="metric-card">
               <span class="metric-card__label">{{ metric.label }}</span>
               <strong>{{ metric.value }}</strong>
@@ -153,23 +163,18 @@
 
       <section class="sidebar-card sidebar-card--accent">
         <header class="sidebar-card__header">
-          <p>Insights do mês</p>
-          <h2>Pequenas descobertas, grandes resultados.</h2>
+          <p>Status do dia</p>
+          <h2>Distribuição derivada do sistema</h2>
         </header>
 
         <ul class="insight-list">
-          @for (insight of insights; track insight.id) {
+          @for (item of statusBreakdown(); track item.id) {
             <li>
               <span class="insight-list__bullet" aria-hidden="true"></span>
-              <p>{{ insight.text }} <strong>{{ insight.emphasis }}</strong></p>
+              <p>{{ item.label }} <strong>{{ item.value }}</strong></p>
             </li>
           }
         </ul>
-
-        <div class="svg-placeholder svg-placeholder--soft">
-          <span>Ilustração futura</span>
-          <small>Reserva visual para SVG editorial</small>
-        </div>
       </section>
     </aside>
   </div>

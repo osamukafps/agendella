@@ -22,8 +22,10 @@ export class ClientsApiService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBaseUrl;
 
-  list(cursor?: string): Promise<PaginatedResponse<ClientResponse>> {
-    const params: Record<string, string> = cursor ? { cursor } : {};
+  list(cursor?: string, pageSize?: number): Promise<PaginatedResponse<ClientResponse>> {
+    const params: Record<string, string> = {};
+    if (cursor) params['cursor'] = cursor;
+    if (pageSize) params['pageSize'] = String(pageSize);
     return firstValueFrom(
       this.http.get<PaginatedResponse<ClientResponse>>(`${this.base}/clients`, { params })
     );
@@ -53,9 +55,12 @@ export class ClientsApiService {
 
   getHistory(
     clientId: string,
-    cursor?: string
+    cursor?: string,
+    pageSize?: number,
   ): Promise<PaginatedResponse<ClientHistoryEventResponse>> {
-    const params: Record<string, string> = cursor ? { cursor } : {};
+    const params: Record<string, string> = {};
+    if (cursor) params['cursor'] = cursor;
+    if (pageSize) params['pageSize'] = String(pageSize);
     return firstValueFrom(
       this.http.get<PaginatedResponse<ClientHistoryEventResponse>>(
         `${this.base}/clients/${clientId}/history`,

@@ -1,302 +1,388 @@
-import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { AgendaApiService } from './agenda-api.service';
+import { ClientsApiService } from '../clients/clients-api.service';
+import { ProfessionalsApiService } from '../professionals/professionals-api.service';
+import { ServicesApiService } from '../services/services-api.service';
+import { AppointmentCardComponent } from './appointment-card.component';
+import { getApiErrorMessage } from '../../core/api/api-error.utils';
+import { collectCursorPages } from '../../core/api/cursor-pagination';
+import {
+  buildAgendaAppointments,
+  buildAgendaLookupMaps,
+  buildAgendaSummary,
+  buildTimelineSlots,
+  DEFAULT_TIMELINE_END_MINUTES,
+  formatAgendaDateLabel,
+  getNowMarkerTop,
+  getTimelineBounds,
+  getWeekDays,
+  isSameLocalDay,
+  parseApiDate,
+  shiftApiDate,
+  SLOT_MINUTES,
+  todayApiDate,
+  toApiDate,
+} from './agenda-utils';
+import type {
+  AgendaAppointmentViewModel,
+  AgendaLookupMaps,
+  TimelineBounds,
+  WeekDay,
+} from './agenda-utils';
+import type {
+  AppointmentResponse,
+  ClientResponse,
+  ProfessionalResponse,
+  ServiceResponse,
+} from '../../core/api/api.models';
 
-type AppointmentStatusTone = 'scheduled' | 'active' | 'completed' | 'review' | 'cancelled';
+const AGENDA_PAGE_SIZE = 100;
 
-interface TimelineSlot {
-  time: string;
-  label: string;
-  gridRow: string;
-  isHour: boolean;
-}
-
-interface DayChip {
-  id: string;
-  weekday: string;
-  dayNumber: string;
-  isToday: boolean;
-  isWeekend: boolean;
-}
-
-interface ViewModeOption {
-  id: 'day' | 'week' | 'month';
-  label: string;
-  active: boolean;
-}
-
-interface SummaryMetric {
+interface SummaryCardViewModel {
   id: string;
   label: string;
   value: string;
   detail: string;
 }
 
-interface Insight {
-  id: string;
-  text: string;
-  emphasis: string;
-}
-
-interface DailyAppointment {
-  id: string;
-  startTime: string;
-  endTime: string;
-  durationSlots: number;
-  isCompact: boolean;
-  clientName: string;
-  serviceName: string;
-  professionalName: string;
-  statusLabel: string;
-  statusTone: AppointmentStatusTone;
-  statusColor: string;
-  statusBackground: string;
-  details: string;
-  gridRow: string;
-}
-
-const TIMELINE_START_MINUTES = 9 * 60;
-const TIMELINE_END_MINUTES = 18 * 60;
-const SLOT_MINUTES = 30;
-const SLOT_HEIGHT_PX = 72;
-const TODAY = new Date();
-
-function minutesFromTime(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-}
-
 function minutesFromDate(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
 }
 
-function toGridRow(startTime: string, endTime: string, minimumSpan = 1): string {
-  const rowStart = ((minutesFromTime(startTime) - TIMELINE_START_MINUTES) / SLOT_MINUTES) + 1;
-  const durationSpan = (minutesFromTime(endTime) - minutesFromTime(startTime)) / SLOT_MINUTES;
-  const span = Math.max(minimumSpan, durationSpan);
-  return `${rowStart} / span ${span}`;
-}
+function formatWeekRange(days: WeekDay[]): string {
+  if (days.length === 0) {
+    return '';
+  }
 
-function formatDateLabel(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(date);
-}
-
-function formatTimeLabel(date: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-}
-
-function isSameCalendarDate(first: Date, second: Date): boolean {
-  return first.getFullYear() === second.getFullYear()
-    && first.getMonth() === second.getMonth()
-    && first.getDate() === second.getDate();
-}
-
-function buildWeekDays(referenceDate: Date): DayChip[] {
-  const weekdayIndex = referenceDate.getDay();
-  const mondayOffset = weekdayIndex === 0 ? -6 : 1 - weekdayIndex;
-  const monday = new Date(referenceDate);
-  monday.setDate(referenceDate.getDate() + mondayOffset);
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-
-    const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' })
-      .format(date)
-      .replace('.', '')
-      .slice(0, 3);
-
-    return {
-      id: date.toISOString(),
-      weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
-      dayNumber: new Intl.DateTimeFormat('pt-BR', { day: '2-digit' }).format(date),
-      isToday: date.toDateString() === referenceDate.toDateString(),
-      isWeekend: date.getDay() === 0 || date.getDay() === 6,
-    };
+  const formatter = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
   });
+
+  const first = formatter.format(parseApiDate(days[0].date));
+  const last = formatter.format(parseApiDate(days[days.length - 1].date));
+  return `${first} - ${last}`;
+}
+
+function lastLocalAppointmentDate(appointments: AppointmentResponse[]): string | null {
+  const last = appointments[appointments.length - 1];
+  return last ? toApiDate(new Date(last.startAtUtc)) : null;
 }
 
 @Component({
   selector: 'app-agenda-page',
   standalone: true,
+  imports: [AppointmentCardComponent],
   templateUrl: './agenda-page.component.html',
   styleUrl: './agenda-page.component.scss',
 })
-export class AgendaPageComponent implements OnDestroy {
+export class AgendaPageComponent implements OnInit, OnDestroy {
+  @Input() scope: 'all' | 'mine' = 'all';
+
   private readonly authService = inject(AuthService);
+  private readonly agendaApi = inject(AgendaApiService);
+  private readonly clientsApi = inject(ClientsApiService);
+  private readonly professionalsApi = inject(ProfessionalsApiService);
+  private readonly servicesApi = inject(ServicesApiService);
+
   private readonly currentDateTime = signal(new Date());
   private readonly nowTimerId = typeof window === 'undefined'
     ? null
-    : window.setInterval(() => {
-      this.currentDateTime.set(new Date());
-    }, 60_000);
-  private readonly agendaDate = TODAY;
+    : window.setInterval(() => this.currentDateTime.set(new Date()), 60_000);
 
-  protected readonly dayLabel = formatDateLabel(TODAY);
-  protected readonly weekDays = buildWeekDays(TODAY);
-  protected readonly viewModes: ViewModeOption[] = [
-    { id: 'day', label: 'Dia', active: true },
-    { id: 'week', label: 'Semana', active: false },
-    { id: 'month', label: 'Mês', active: false },
+  protected readonly selectedDate = signal(todayApiDate());
+  protected readonly isLoading = signal(false);
+  protected readonly hasLoadedOnce = signal(false);
+  protected readonly error = signal<string | null>(null);
+  protected readonly nextAppointmentsCursor = signal<string | null | undefined>(undefined);
+  protected readonly appointments = signal<AppointmentResponse[]>([]);
+  protected readonly lookupMaps = signal<AgendaLookupMaps>(buildAgendaLookupMaps([], [], []));
+  protected readonly statusLegend = [
+    { id: 'scheduled', label: 'Agendado', color: 'var(--color-primary)' },
+    { id: 'completed', label: 'Concluído', color: 'var(--color-neutral-400)' },
+    { id: 'cancelled', label: 'Cancelado', color: 'var(--color-error)' },
+    { id: 'review', label: 'Requer revisão', color: 'var(--color-warning)' },
   ];
-  protected readonly isCurrentDayView = computed(() =>
-    isSameCalendarDate(this.agendaDate, this.currentDateTime())
+
+  protected readonly userName = computed(() => {
+    const displayName = this.authService.currentUser()?.displayName?.trim();
+    return displayName ? displayName.split(/\s+/)[0] : 'Profissional';
+  });
+
+  protected readonly salonName = computed(() =>
+    this.authService.currentUser()?.salonName?.trim() || 'Seu salão'
   );
+
+  protected readonly isMineUnavailable = computed(() =>
+    this.scope === 'mine' && !this.authService.currentUser()?.professionalId
+  );
+
+  protected readonly weekDays = computed(() => getWeekDays(parseApiDate(this.selectedDate())));
+  protected readonly weekRangeLabel = computed(() => formatWeekRange(this.weekDays()));
+  protected readonly dayLabel = computed(() => formatAgendaDateLabel(this.selectedDate()));
+  protected readonly isCurrentDayView = computed(() => this.selectedDate() === todayApiDate());
   protected readonly currentTimeLabel = computed(() =>
-    `Agora · ${formatTimeLabel(this.currentDateTime())}`
+    new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(this.currentDateTime())
   );
+
+  protected readonly selectedDayAppointments = computed(() =>
+    this.appointments().filter(appointment => isSameLocalDay(appointment.startAtUtc, this.selectedDate()))
+  );
+
+  protected readonly timelineBounds = computed<TimelineBounds>(() =>
+    getTimelineBounds(this.selectedDayAppointments(), this.isCurrentDayView(), this.currentDateTime())
+  );
+
+  protected readonly timeSlots = computed(() => buildTimelineSlots(this.timelineBounds()));
+
   protected readonly showNowMarker = computed(() => {
     if (!this.isCurrentDayView()) {
       return false;
     }
 
-    const currentMinutes = minutesFromDate(this.currentDateTime());
-    return currentMinutes >= TIMELINE_START_MINUTES && currentMinutes <= TIMELINE_END_MINUTES;
-  });
-  protected readonly nowLineTop = computed(() => {
-    const currentMinutes = minutesFromDate(this.currentDateTime());
-    return `${((currentMinutes - TIMELINE_START_MINUTES) / SLOT_MINUTES) * SLOT_HEIGHT_PX}px`;
+    const nowMinutes = minutesFromDate(this.currentDateTime());
+    return nowMinutes >= this.timelineBounds().startMinutes
+      && nowMinutes <= this.timelineBounds().endMinutes;
   });
 
-  protected readonly greetingName = computed(() => {
-    const displayName = this.authService.currentUser()?.displayName?.trim();
-    return displayName ? displayName.split(/\s+/)[0] : 'Beatriz';
-  });
-
-  protected readonly salonName = computed(() =>
-    this.authService.currentUser()?.salonName ?? 'Atelier Belle Vie'
+  protected readonly nowLineTop = computed(() =>
+    getNowMarkerTop(this.timelineBounds(), this.currentDateTime())
   );
 
-  protected readonly timeSlots: TimelineSlot[] = Array.from(
-    { length: (TIMELINE_END_MINUTES - TIMELINE_START_MINUTES) / SLOT_MINUTES },
-    (_, index) => {
-      const totalMinutes = TIMELINE_START_MINUTES + (index * SLOT_MINUTES);
-      const hours = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
-      const minutes = (totalMinutes % 60).toString().padStart(2, '0');
-      const time = `${hours}:${minutes}`;
+  protected readonly visibleAppointments = computed<AgendaAppointmentViewModel[]>(() =>
+    buildAgendaAppointments(
+      this.selectedDayAppointments(),
+      this.lookupMaps(),
+      this.timelineBounds().startMinutes,
+    )
+  );
 
-      return {
-        time,
-        label: minutes === '00' ? time : '',
-        gridRow: `${index + 1}`,
-        isHour: minutes === '00',
-      };
+  protected readonly summary = computed(() =>
+    buildAgendaSummary(this.visibleAppointments(), this.currentDateTime())
+  );
+
+  protected readonly summaryCards = computed<SummaryCardViewModel[]>(() => {
+    const summary = this.summary();
+
+    return [
+      {
+        id: 'total',
+        label: 'Atendimentos',
+        value: String(summary.total),
+        detail: 'no dia selecionado',
+      },
+      {
+        id: 'scheduled',
+        label: 'Agendados',
+        value: String(summary.statusCounts.Scheduled),
+        detail: 'ainda previstos',
+      },
+      {
+        id: 'completed',
+        label: 'Concluídos',
+        value: String(summary.statusCounts.Completed),
+        detail: 'já finalizados',
+      },
+      {
+        id: 'review',
+        label: 'Revisão',
+        value: String(summary.requiresReview),
+        detail: 'pedem atenção',
+      },
+    ];
+  });
+
+  protected readonly summaryLead = computed(() => {
+    const total = this.summary().total;
+    if (total === 0) {
+      return 'Nenhum atendimento encontrado para o dia selecionado.';
     }
-  );
 
-  protected readonly appointments: DailyAppointment[] = [
-    {
-      id: 'appt-01',
-      startTime: '09:00',
-      endTime: '10:00',
-      durationSlots: 2,
-      isCompact: false,
-      clientName: 'Mariana Coelho',
-      serviceName: 'Escova modelada',
-      professionalName: 'Camila',
-      statusLabel: 'Concluído',
-      statusTone: 'completed',
-      statusColor: 'var(--color-neutral-600)',
-      statusBackground: 'var(--color-neutral-100)',
-      details: 'Finalizado sem pendências.',
-      gridRow: toGridRow('09:00', '10:00'),
-    },
-    {
-      id: 'appt-02',
-      startTime: '10:30',
-      endTime: '11:30',
-      durationSlots: 2,
-      isCompact: false,
-      clientName: 'Beatriz Andrade',
-      serviceName: 'Manicure e pedicure',
-      professionalName: 'Larissa',
-      statusLabel: 'Em atendimento',
-      statusTone: 'active',
-      statusColor: 'var(--color-secondary)',
-      statusBackground: 'var(--color-secondary-subtle)',
-      details: 'Mesa 2, esmaltação em andamento.',
-      gridRow: toGridRow('10:30', '11:30'),
-    },
-    {
-      id: 'appt-03',
-      startTime: '13:00',
-      endTime: '14:00',
-      durationSlots: 2,
-      isCompact: false,
-      clientName: 'Sofia Marques',
-      serviceName: 'Design de sobrancelhas',
-      professionalName: 'Camila',
-      statusLabel: 'Agendado',
-      statusTone: 'scheduled',
-      statusColor: 'var(--color-primary)',
-      statusBackground: 'var(--color-primary-subtle)',
-      details: 'Confirmado por WhatsApp.',
-      gridRow: toGridRow('13:00', '14:00'),
-    },
-    {
-      id: 'appt-04',
-      startTime: '14:30',
-      endTime: '15:30',
-      durationSlots: 2,
-      isCompact: false,
-      clientName: 'Antonella Reis',
-      serviceName: 'Hidratação profunda',
-      professionalName: 'Larissa',
-      statusLabel: 'Revisar',
-      statusTone: 'review',
-      statusColor: 'var(--color-warning)',
-      statusBackground: 'var(--color-warning-subtle)',
-      details: 'Revisar encaixe com bloqueio.',
-      gridRow: toGridRow('14:30', '15:30'),
-    },
-    {
-      id: 'appt-05',
-      startTime: '17:30',
-      endTime: '18:00',
-      durationSlots: 1,
-      isCompact: true,
-      clientName: 'Eduarda Lima',
-      serviceName: 'Escova + penteado',
-      professionalName: 'Camila',
-      statusLabel: 'Cancelado',
-      statusTone: 'cancelled',
-      statusColor: 'var(--color-error)',
-      statusBackground: 'var(--color-error-subtle)',
-      details: 'Reagendado para quinta.',
-      gridRow: toGridRow('17:30', '18:00', 2),
-    },
-  ];
+    const next = this.summary().nextAppointment;
+    if (!next) {
+      return `${total} atendimento${total === 1 ? '' : 's'} real${total === 1 ? '' : 'es'} neste dia.`;
+    }
 
-  protected readonly summaryMetrics: SummaryMetric[] = [
-    { id: 'clients', label: 'Clientes atendidas', value: '284', detail: 'no mês de junho' },
-    { id: 'revenue', label: 'Faturamento', value: 'R$ 38.420', detail: '+12% vs. maio' },
-    { id: 'new', label: 'Novas clientes', value: '42', detail: 'primeira visita' },
-    { id: 'return', label: 'Taxa de retorno', value: '78%', detail: 'clientes recorrentes' },
-  ];
+    return `Próximo destaque às ${next.startTimeLabel} com ${next.clientName}.`;
+  });
 
-  protected readonly insights: Insight[] = [
-    { id: 'best-day', text: 'Seu melhor dia foi', emphasis: 'sexta-feira, com 38 atendimentos.' },
-    { id: 'best-service', text: 'Serviço mais vendido:', emphasis: 'Escova modelada (94 vezes).' },
-    { id: 'growth', text: 'Faturamento com', emphasis: '+12% em relação ao mês passado.' },
-  ];
+  protected readonly summarySecondary = computed(() => {
+    const items = this.visibleAppointments();
+    if (items.length === 0) {
+      return 'Troque o dia na semana para consultar outras datas.';
+    }
 
-  protected readonly statusLegend = [
-    { id: 'scheduled', label: 'Agendado', color: 'var(--color-primary)' },
-    { id: 'active', label: 'Em atendimento', color: 'var(--color-secondary)' },
-    { id: 'completed', label: 'Concluído', color: 'var(--color-neutral-400)' },
-    { id: 'review', label: 'Revisar', color: 'var(--color-warning)' },
-  ];
+    const first = items[0];
+    const last = items[items.length - 1];
+    return `Janela do dia entre ${first.startTimeLabel} e ${last.endTimeLabel}.`;
+  });
+
+  protected readonly statusBreakdown = computed(() => [
+    { id: 'scheduled', label: 'Agendados', value: this.summary().statusCounts.Scheduled },
+    { id: 'completed', label: 'Concluídos', value: this.summary().statusCounts.Completed },
+    { id: 'cancelled', label: 'Cancelados', value: this.summary().statusCounts.Cancelled },
+    { id: 'no-show', label: 'Não compareceu', value: this.summary().statusCounts.NoShow },
+    { id: 'review', label: 'Requer revisão', value: this.summary().requiresReview },
+  ]);
+
+  async ngOnInit(): Promise<void> {
+    await this.refreshAgenda();
+  }
 
   ngOnDestroy(): void {
     if (this.nowTimerId !== null) {
       window.clearInterval(this.nowTimerId);
     }
+  }
+
+  protected async selectDay(date: string): Promise<void> {
+    if (date === this.selectedDate()) {
+      return;
+    }
+
+    this.selectedDate.set(date);
+    await this.ensureAgendaCoverage();
+  }
+
+  protected async goToPreviousWeek(): Promise<void> {
+    this.selectedDate.set(shiftApiDate(this.selectedDate(), -7));
+    await this.ensureAgendaCoverage();
+  }
+
+  protected async goToNextWeek(): Promise<void> {
+    this.selectedDate.set(shiftApiDate(this.selectedDate(), 7));
+    await this.ensureAgendaCoverage();
+  }
+
+  protected async refreshAgenda(): Promise<void> {
+    if (this.isMineUnavailable()) {
+      this.hasLoadedOnce.set(true);
+      this.error.set(null);
+      this.appointments.set([]);
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    try {
+      await this.loadLookups();
+      this.appointments.set([]);
+      this.nextAppointmentsCursor.set(undefined);
+      await this.loadAppointmentsUntilWeekEnd();
+      this.hasLoadedOnce.set(true);
+    } catch (error) {
+      this.error.set(getApiErrorMessage(error, 'Não foi possível carregar a agenda agora.'));
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async ensureAgendaCoverage(): Promise<void> {
+    if (this.isMineUnavailable()) {
+      return;
+    }
+
+    if (this.isWeekCovered()) {
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    try {
+      await this.loadAppointmentsUntilWeekEnd();
+      this.hasLoadedOnce.set(true);
+    } catch (error) {
+      this.error.set(getApiErrorMessage(error, 'Não foi possível atualizar a agenda.'));
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private isWeekCovered(): boolean {
+    if (this.nextAppointmentsCursor() === null) {
+      return true;
+    }
+
+    const loadedUntil = lastLocalAppointmentDate(this.appointments());
+    const weekEndDate = this.weekDays()[this.weekDays().length - 1]?.date ?? this.selectedDate();
+
+    if (!loadedUntil) {
+      return false;
+    }
+
+    return loadedUntil >= weekEndDate;
+  }
+
+  private async loadLookups(): Promise<void> {
+    const [clients, professionals, services] = await Promise.all([
+      this.collectAllClients(),
+      this.collectAllProfessionals(),
+      this.collectAllServices(),
+    ]);
+
+    this.lookupMaps.set(buildAgendaLookupMaps(clients, professionals, services));
+  }
+
+  private async collectAllClients(): Promise<ClientResponse[]> {
+    const result = await collectCursorPages(
+      ({ cursor, pageSize }) => this.clientsApi.list(cursor, pageSize),
+      { pageSize: AGENDA_PAGE_SIZE },
+    );
+
+    return result.items;
+  }
+
+  private async collectAllProfessionals(): Promise<ProfessionalResponse[]> {
+    const result = await collectCursorPages(
+      ({ cursor, pageSize }) => this.professionalsApi.list(cursor, pageSize),
+      { pageSize: AGENDA_PAGE_SIZE },
+    );
+
+    return result.items;
+  }
+
+  private async collectAllServices(): Promise<ServiceResponse[]> {
+    const result = await collectCursorPages(
+      ({ cursor, pageSize }) => this.servicesApi.list(cursor, pageSize),
+      { pageSize: AGENDA_PAGE_SIZE },
+    );
+
+    return result.items;
+  }
+
+  private async loadAppointmentsUntilWeekEnd(): Promise<void> {
+    const weekEndDate = this.weekDays()[this.weekDays().length - 1]?.date ?? this.selectedDate();
+    const currentAppointments = this.appointments();
+
+    if (currentAppointments.length > 0 && this.isWeekCovered()) {
+      return;
+    }
+
+    const result = await collectCursorPages(
+      ({ cursor, pageSize }) => this.agendaApi.list({ cursor, pageSize }),
+      {
+        initialCursor: this.nextAppointmentsCursor() ?? undefined,
+        pageSize: AGENDA_PAGE_SIZE,
+        stopWhen: ({ items, page }) => {
+          if (!page.nextCursor) {
+            return true;
+          }
+
+          const loadedUntil = lastLocalAppointmentDate(items);
+          return loadedUntil !== null && loadedUntil >= weekEndDate;
+        },
+      },
+    );
+
+    if (result.items.length > 0) {
+      this.appointments.update(items => [...items, ...result.items]);
+    } else if (this.nextAppointmentsCursor() === undefined) {
+      this.appointments.set([]);
+    }
+
+    this.nextAppointmentsCursor.set(result.nextCursor);
   }
 }

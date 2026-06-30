@@ -17,8 +17,10 @@ export class ProfessionalsApiService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBaseUrl;
 
-  list(cursor?: string): Promise<PaginatedResponse<ProfessionalResponse>> {
-    const params: Record<string, string> = cursor ? { cursor } : {};
+  list(cursor?: string, pageSize?: number): Promise<PaginatedResponse<ProfessionalResponse>> {
+    const params: Record<string, string> = {};
+    if (cursor) params['cursor'] = cursor;
+    if (pageSize) params['pageSize'] = String(pageSize);
     return firstValueFrom(
       this.http.get<PaginatedResponse<ProfessionalResponse>>(`${this.base}/professionals`, { params })
     );

@@ -14,8 +14,10 @@ export class ServicesApiService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBaseUrl;
 
-  list(cursor?: string): Promise<PaginatedResponse<ServiceResponse>> {
-    const params: Record<string, string> = cursor ? { cursor } : {};
+  list(cursor?: string, pageSize?: number): Promise<PaginatedResponse<ServiceResponse>> {
+    const params: Record<string, string> = {};
+    if (cursor) params['cursor'] = cursor;
+    if (pageSize) params['pageSize'] = String(pageSize);
     return firstValueFrom(
       this.http.get<PaginatedResponse<ServiceResponse>>(`${this.base}/services`, { params })
     );

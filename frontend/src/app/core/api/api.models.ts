@@ -23,10 +23,16 @@ export type ClientHistoryEventType =
 
 // ─── Comuns ──────────────────────────────────────────────────────────────────
 
+export type ApiErrorDetails =
+  | Record<string, unknown>
+  | string[]
+  | string
+  | null;
+
 export interface ErrorResponse {
   code: string;
   message: string;
-  details?: Record<string, string[]>;
+  details?: ApiErrorDetails;
 }
 
 export interface PaginatedResponse<T> {
