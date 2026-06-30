@@ -73,9 +73,17 @@
             </li>
           }
 
-          <li class="timeline__now" [style.--now-top]="nowLineTop" aria-hidden="true">
-            <span class="timeline__now-dot"></span>
-          </li>
+          @if (showNowMarker()) {
+            <li
+              class="timeline__now"
+              [style.--now-top]="nowLineTop()"
+              [attr.aria-label]="currentTimeLabel()"
+              [attr.title]="currentTimeLabel()"
+            >
+              <span class="timeline__now-dot"></span>
+              <span class="timeline__now-label">{{ currentTimeLabel() }}</span>
+            </li>
+          }
 
           @for (appointment of appointments; track appointment.id) {
             <li class="timeline__appointment" [style.grid-row]="appointment.gridRow">

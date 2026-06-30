@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 
 type AppointmentStatusTone = 'scheduled' | 'active' | 'completed' | 'review' | 'cancelled';
@@ -65,6 +65,10 @@ function minutesFromTime(time: string): number {
   return hours * 60 + minutes;
 }
 
+function minutesFromDate(date: Date): number {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
 function toGridRow(startTime: string, endTime: string, minimumSpan = 1): string {
   const rowStart = ((minutesFromTime(startTime) - TIMELINE_START_MINUTES) / SLOT_MINUTES) + 1;
   const durationSpan = (minutesFromTime(endTime) - minutesFromTime(startTime)) / SLOT_MINUTES;
@@ -79,6 +83,19 @@ function formatDateLabel(date: Date): string {
     month: 'long',
     year: 'numeric',
   }).format(date);
+}
+
+function formatTimeLabel(date: Date): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function isSameCalendarDate(first: Date, second: Date): boolean {
+  return first.getFullYear() === second.getFullYear()
+    && first.getMonth() === second.getMonth()
+    && first.getDate() === second.getDate();
 }
 
 function buildWeekDays(referenceDate: Date): DayChip[] {
@@ -112,18 +129,41 @@ function buildWeekDays(referenceDate: Date): DayChip[] {
   templateUrl: './agenda-page.component.html',
   styleUrl: './agenda-page.component.scss',
 })
-export class AgendaPageComponent {
+export class AgendaPageComponent implements OnDestroy {
   private readonly authService = inject(AuthService);
+  private readonly currentDateTime = signal(new Date());
+  private readonly nowTimerId = typeof window === 'undefined'
+    ? null
+    : window.setInterval(() => {
+      this.currentDateTime.set(new Date());
+    }, 60_000);
+  private readonly agendaDate = TODAY;
 
   protected readonly dayLabel = formatDateLabel(TODAY);
-  protected readonly nowTime = '11:20';
-  protected readonly nowLineTop = `${((minutesFromTime(this.nowTime) - TIMELINE_START_MINUTES) / SLOT_MINUTES) * SLOT_HEIGHT_PX}px`;
   protected readonly weekDays = buildWeekDays(TODAY);
   protected readonly viewModes: ViewModeOption[] = [
     { id: 'day', label: 'Dia', active: true },
     { id: 'week', label: 'Semana', active: false },
     { id: 'month', label: 'Mês', active: false },
   ];
+  protected readonly isCurrentDayView = computed(() =>
+    isSameCalendarDate(this.agendaDate, this.currentDateTime())
+  );
+  protected readonly currentTimeLabel = computed(() =>
+    `Agora · ${formatTimeLabel(this.currentDateTime())}`
+  );
+  protected readonly showNowMarker = computed(() => {
+    if (!this.isCurrentDayView()) {
+      return false;
+    }
+
+    const currentMinutes = minutesFromDate(this.currentDateTime());
+    return currentMinutes >= TIMELINE_START_MINUTES && currentMinutes <= TIMELINE_END_MINUTES;
+  });
+  protected readonly nowLineTop = computed(() => {
+    const currentMinutes = minutesFromDate(this.currentDateTime());
+    return `${((currentMinutes - TIMELINE_START_MINUTES) / SLOT_MINUTES) * SLOT_HEIGHT_PX}px`;
+  });
 
   protected readonly greetingName = computed(() => {
     const displayName = this.authService.currentUser()?.displayName?.trim();
@@ -253,4 +293,10 @@ export class AgendaPageComponent {
     { id: 'completed', label: 'Concluído', color: 'var(--color-neutral-400)' },
     { id: 'review', label: 'Revisar', color: 'var(--color-warning)' },
   ];
+
+  ngOnDestroy(): void {
+    if (this.nowTimerId !== null) {
+      window.clearInterval(this.nowTimerId);
+    }
+  }
 }
