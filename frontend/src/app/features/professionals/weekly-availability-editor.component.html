@@ -1,5 +1,10 @@
 @if (isLoading()) {
   <div class="editor-loading" aria-live="polite">Carregando disponibilidade…</div>
+} @else if (error() && !hasLoaded()) {
+  <div class="availability-editor">
+    <div class="editor-error" role="alert">{{ error() }}</div>
+    <button class="btn-save btn-save--secondary" (click)="load()">Tentar novamente</button>
+  </div>
 } @else {
   <div class="availability-editor">
 
@@ -53,6 +58,10 @@
         </div>
       }
     </div>
+
+    @if (!hasConfiguredAvailability()) {
+      <div class="editor-loading" aria-live="polite">Nenhum horário semanal configurado ainda. Ative os dias desejados e salve.</div>
+    }
 
     <button
       class="btn-save"

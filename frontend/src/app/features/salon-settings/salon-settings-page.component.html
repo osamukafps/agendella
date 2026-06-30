@@ -7,41 +7,77 @@
     <div class="state-loading">Carregando…</div>
   } @else {
 
-    @if (error()) {
-      <div class="state-error" role="alert">{{ error() }}</div>
-    }
-
-    @if (saveOk()) {
-      <div class="state-success" role="status">Salvo com sucesso.</div>
-    }
-
     <!-- Dados do Salão -->
     <section class="form-section">
       <h3 class="section-title">Dados do salão</h3>
+      <p class="section-helper">Edite os dados persistidos pelo backend, incluindo o identificador IANA do fuso horário.</p>
       <form (submit)="saveSettings($event)" novalidate>
+        @if (settingsError()) {
+          <div class="state-error" role="alert">{{ settingsError() }}</div>
+        }
+
+        @if (settingsSaveOk()) {
+          <div class="state-success" role="status">Dados do salão salvos com sucesso.</div>
+        }
+
         <div class="field">
           <label class="field-label" for="name">Nome do salão</label>
           <input id="name" class="field-input" type="text" autocomplete="organization"
-            [value]="formName()" (input)="formName.set($any($event.target).value)">
+            [value]="formName()"
+            (input)="formName.set($any($event.target).value)"
+            [attr.aria-invalid]="settingsFieldError('name') ? 'true' : null">
+          @if (settingsFieldError('name')) {
+            <span class="field-error" role="alert">{{ settingsFieldError('name') }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="address">Endereço</label>
           <input id="address" class="field-input" type="text" autocomplete="street-address"
-            [value]="formAddress()" (input)="formAddress.set($any($event.target).value)">
+            [value]="formAddress()"
+            (input)="formAddress.set($any($event.target).value)"
+            [attr.aria-invalid]="settingsFieldError('address') ? 'true' : null">
+          @if (settingsFieldError('address')) {
+            <span class="field-error" role="alert">{{ settingsFieldError('address') }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="phone">Telefone</label>
           <input id="phone" class="field-input" type="tel" autocomplete="tel"
-            [value]="formPhone()" (input)="formPhone.set($any($event.target).value)">
+            [value]="formPhone()"
+            (input)="formPhone.set($any($event.target).value)"
+            [attr.aria-invalid]="settingsFieldError('phone') ? 'true' : null">
+          @if (settingsFieldError('phone')) {
+            <span class="field-error" role="alert">{{ settingsFieldError('phone') }}</span>
+          }
+        </div>
+        <div class="field">
+          <label class="field-label" for="timezone">Fuso horário (IANA)</label>
+          <input id="timezone" class="field-input" type="text" list="time-zone-options"
+            [value]="formTimezone()"
+            (input)="formTimezone.set($any($event.target).value)"
+            [attr.aria-invalid]="settingsFieldError('timeZoneId') ? 'true' : null">
+          <datalist id="time-zone-options">
+            @for (timeZone of timeZones; track timeZone) {
+              <option [value]="timeZone"></option>
+            }
+          </datalist>
+          <span class="field-hint">Exemplo: `America/Sao_Paulo`.</span>
+          @if (settingsFieldError('timeZoneId')) {
+            <span class="field-error" role="alert">{{ settingsFieldError('timeZoneId') }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="cancel">Aviso mínimo de cancelamento (min)</label>
           <input id="cancel" class="field-input" type="number" min="0"
             [value]="formMinCancel()"
-            (input)="formMinCancel.set(+$any($event.target).value)">
+            (input)="formMinCancel.set(+$any($event.target).value)"
+            [attr.aria-invalid]="settingsFieldError('minimumCancellationNoticeMinutes') ? 'true' : null">
+          @if (settingsFieldError('minimumCancellationNoticeMinutes')) {
+            <span class="field-error" role="alert">{{ settingsFieldError('minimumCancellationNoticeMinutes') }}</span>
+          }
         </div>
-        <button type="submit" class="btn-primary" [disabled]="isSaving()">
-          {{ isSaving() ? 'Salvando…' : 'Salvar dados' }}
+        <button type="submit" class="btn-primary" [disabled]="isSavingSettings()">
+          {{ isSavingSettings() ? 'Salvando…' : 'Salvar dados' }}
         </button>
       </form>
     </section>
@@ -49,6 +85,20 @@
     <!-- Horários de Funcionamento -->
     <section class="form-section">
       <h3 class="section-title">Horários de funcionamento</h3>
+      @if (!hasPersistedBusinessHours()) {
+        <div class="state-info" role="status">
+          Ainda não há horários persistidos no backend. Defina abaixo a configuração inicial e salve para ativar o expediente do salão.
+        </div>
+      }
+
+      @if (hoursError()) {
+        <div class="state-error" role="alert">{{ hoursError() }}</div>
+      }
+
+      @if (hoursSaveOk()) {
+        <div class="state-success" role="status">Horários salvos com sucesso.</div>
+      }
+
       <div class="hours-list">
         @for (h of hours(); track h.dayOfWeek; let i = $index) {
           <div class="hours-row">
@@ -62,20 +112,31 @@
               <div class="hours-times">
                 <input type="time" class="time-input" [value]="h.startLocalTime ?? ''"
                   (change)="updateHourTime(i, 'startLocalTime', $any($event.target).value)"
-                  [attr.aria-label]="daysPt[h.dayOfWeek] + ' abertura'">
+                  [attr.aria-label]="daysPt[h.dayOfWeek] + ' abertura'"
+                  [attr.aria-invalid]="hourFieldError(i, 'startLocalTime') ? 'true' : null">
                 <span class="time-sep">–</span>
                 <input type="time" class="time-input" [value]="h.endLocalTime ?? ''"
                   (change)="updateHourTime(i, 'endLocalTime', $any($event.target).value)"
-                  [attr.aria-label]="daysPt[h.dayOfWeek] + ' fechamento'">
+                  [attr.aria-label]="daysPt[h.dayOfWeek] + ' fechamento'"
+                  [attr.aria-invalid]="hourFieldError(i, 'endLocalTime') ? 'true' : null">
               </div>
+              @if (hourFieldError(i, 'startLocalTime')) {
+                <span class="field-error" role="alert">{{ hourFieldError(i, 'startLocalTime') }}</span>
+              }
+              @if (hourFieldError(i, 'endLocalTime')) {
+                <span class="field-error" role="alert">{{ hourFieldError(i, 'endLocalTime') }}</span>
+              }
             } @else {
               <span class="hours-closed">Fechado</span>
             }
           </div>
         }
       </div>
-      <button class="btn-primary" (click)="saveHours()" [disabled]="isSaving()">
-        {{ isSaving() ? 'Salvando…' : 'Salvar horários' }}
+      @if (!hasBusinessHoursConfigured()) {
+        <p class="section-helper">Nenhum dia está aberto no momento. Ative pelo menos um dia para configurar o expediente.</p>
+      }
+      <button class="btn-primary" (click)="saveHours()" [disabled]="isSavingHours()">
+        {{ isSavingHours() ? 'Salvando…' : 'Salvar horários' }}
       </button>
     </section>
 

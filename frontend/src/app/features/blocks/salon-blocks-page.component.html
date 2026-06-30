@@ -4,29 +4,45 @@
     <button class="btn-add" (click)="openCreate()" aria-label="Novo bloqueio">+ Novo</button>
   </header>
 
-  @if (error()) { <div class="state-error" role="alert">{{ error() }}</div> }
+  @if (pageError()) { <div class="state-error" role="alert">{{ pageError() }}</div> }
 
   @if (showForm()) {
     <div class="form-card">
       <h3 class="form-title">Novo bloqueio</h3>
       <form (submit)="save($event)" novalidate>
+        @if (formError()) {
+          <div class="state-error" role="alert">{{ formError() }}</div>
+        }
+
         <div class="field">
           <label class="field-label" for="blk-start">Início</label>
           <input id="blk-start" class="field-input" type="datetime-local" required
             [value]="toLocalInputValue(form().startAtUtc)"
-            (change)="setField('startAtUtc', toUtcFromInput($any($event.target).value))">
+            (change)="setField('startAtUtc', toUtcFromInput($any($event.target).value))"
+            [attr.aria-invalid]="fieldError('startAtUtc') ? 'true' : null">
+          @if (fieldError('startAtUtc')) {
+            <span class="field-error" role="alert">{{ fieldError('startAtUtc') }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="blk-end">Fim</label>
           <input id="blk-end" class="field-input" type="datetime-local" required
             [value]="toLocalInputValue(form().endAtUtc)"
-            (change)="setField('endAtUtc', toUtcFromInput($any($event.target).value))">
+            (change)="setField('endAtUtc', toUtcFromInput($any($event.target).value))"
+            [attr.aria-invalid]="fieldError('endAtUtc') ? 'true' : null">
+          @if (fieldError('endAtUtc')) {
+            <span class="field-error" role="alert">{{ fieldError('endAtUtc') }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="blk-reason">Motivo</label>
           <input id="blk-reason" class="field-input" type="text" required maxlength="200"
             [value]="form().reason"
-            (input)="setField('reason', $any($event.target).value)">
+            (input)="setField('reason', $any($event.target).value)"
+            [attr.aria-invalid]="fieldError('reason') ? 'true' : null">
+          @if (fieldError('reason')) {
+            <span class="field-error" role="alert">{{ fieldError('reason') }}</span>
+          }
         </div>
         <div class="form-actions">
           <button type="button" class="btn-ghost" (click)="closeForm()">Cancelar</button>
@@ -38,8 +54,15 @@
     </div>
   }
 
-  @if (isLoading()) {
+  @if (isLoading() && !items().length) {
     <div class="state-loading">Carregando bloqueios…</div>
+  } @else if (initialError() && !items().length) {
+    <div class="state-error" role="alert">
+      {{ initialError() }}
+      <div class="state-actions">
+        <button class="btn-secondary" type="button" (click)="load()">Tentar novamente</button>
+      </div>
+    </div>
   } @else {
     <ul class="items-list" role="list" aria-label="Bloqueios do salão">
       @for (block of items(); track block.id) {
@@ -59,5 +82,16 @@
         <li class="state-empty">Nenhum bloqueio cadastrado.</li>
       }
     </ul>
+
+    @if (items().length && nextCursor()) {
+      <div class="list-footer">
+        @if (loadMoreError()) {
+          <div class="state-error" role="alert">{{ loadMoreError() }}</div>
+        }
+        <button class="btn-secondary" type="button" (click)="loadMore()" [disabled]="isLoadingMore()">
+          {{ isLoadingMore() ? 'Carregando…' : 'Carregar mais' }}
+        </button>
+      </div>
+    }
   }
 </div>

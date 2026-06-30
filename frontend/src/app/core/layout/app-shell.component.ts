@@ -2,6 +2,7 @@ import { AuthService } from './../auth/auth.service';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import type { CollaboratorRole } from '../auth/auth.models';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
 
 export interface NavItem {
   id: string;
@@ -17,7 +18,7 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { id: 'profissionais',   label: 'Equipe',          route: '/profissionais',         roles: ['administradora'] },
   { id: 'bloqueios',       label: 'Bloqueios',       route: '/bloqueios',             roles: ['administradora'] },
   { id: 'disponibilidade', label: 'Disponível.',     route: '/minha-disponibilidade', roles: ['profissional'] },
-  { id: 'ausencias',       label: 'Ausências',       route: '/ausencias',             roles: ['profissional'] },
+  { id: 'ausencias',       label: 'Ausências',       route: '/ausencias',             roles: ['administradora', 'profissional'] },
 ];
 
 export function getNavItemsForRole(role: CollaboratorRole | null): NavItem[] {
@@ -28,7 +29,7 @@ export function getNavItemsForRole(role: CollaboratorRole | null): NavItem[] {
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ConfirmDialogComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css',
 })

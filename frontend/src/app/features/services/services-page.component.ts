@@ -1,11 +1,19 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { ServicesApiService } from './services-api.service';
+import { mapApiErrorToUi } from '../../core/api/api-error.utils';
+import {
+  createCursorPaginationState,
+  loadCursorPage,
+  mergeCursorItemsById,
+} from '../../core/api/cursor-pagination';
 import type { ServiceResponse, CreateServiceRequest } from '../../core/api/api.models';
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 
 const EMPTY_FORM: CreateServiceRequest = {
   name: '', description: '', durationMinutes: 60, priceAmount: 0, currency: 'BRL',
 };
+const SERVICES_PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-services-page',
@@ -15,28 +23,38 @@ const EMPTY_FORM: CreateServiceRequest = {
 })
 export class ServicesPageComponent implements OnInit {
   private readonly api  = inject(ServicesApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   readonly auth         = inject(AuthService);
+  private readonly pagination = createCursorPaginationState<ServiceResponse>();
 
-  readonly items        = signal<ServiceResponse[]>([]);
-  readonly isLoading    = signal(false);
+  readonly items        = this.pagination.items;
+  readonly nextCursor   = this.pagination.nextCursor;
+  readonly isLoading    = this.pagination.isLoading;
+  readonly isLoadingMore = this.pagination.isLoadingMore;
+  readonly initialError = this.pagination.initialError;
+  readonly loadMoreError = this.pagination.loadMoreError;
   readonly isSaving     = signal(false);
-  readonly error        = signal<string | null>(null);
+  readonly pageError    = signal<string | null>(null);
+  readonly formError    = signal<string | null>(null);
   readonly formMode     = signal<'create' | 'edit' | null>(null);
   readonly editingId    = signal<string | null>(null);
   readonly form         = signal<CreateServiceRequest>({ ...EMPTY_FORM });
+  readonly fieldErrors  = signal<Record<string, string[]>>({});
 
   async ngOnInit(): Promise<void> { await this.load(); }
 
-  async load(): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
+  async load(reset = true): Promise<void> {
     try {
-      const res = await this.api.list();
-      this.items.set(res.items);
+      await loadCursorPage({
+        state: this.pagination,
+        reset,
+        pageSize: SERVICES_PAGE_SIZE,
+        loadPage: ({ cursor, pageSize }) => this.api.list(cursor, pageSize),
+        mergeItems: mergeCursorItemsById,
+        fallbackMessage: 'Erro ao carregar serviços.',
+      });
     } catch {
-      this.error.set('Erro ao carregar serviços.');
-    } finally {
-      this.isLoading.set(false);
+      // Estado refletido no helper compartilhado.
     }
   }
 
@@ -44,6 +62,8 @@ export class ServicesPageComponent implements OnInit {
     this.form.set({ ...EMPTY_FORM });
     this.editingId.set(null);
     this.formMode.set('create');
+    this.formError.set(null);
+    this.fieldErrors.set({});
   }
 
   openEdit(item: ServiceResponse): void {
@@ -54,18 +74,33 @@ export class ServicesPageComponent implements OnInit {
     });
     this.editingId.set(item.id);
     this.formMode.set('edit');
+    this.formError.set(null);
+    this.fieldErrors.set({});
   }
 
-  closeForm(): void { this.formMode.set(null); this.error.set(null); }
+  closeForm(): void {
+    this.formMode.set(null);
+    this.formError.set(null);
+    this.fieldErrors.set({});
+  }
 
   setField(key: keyof CreateServiceRequest, value: string | number): void {
-    this.form.update(f => ({ ...f, [key]: value }));
+    const nextValue = key === 'currency' && typeof value === 'string'
+      ? value.toUpperCase()
+      : value;
+    this.form.update(f => ({ ...f, [key]: nextValue }));
+    this.fieldErrors.update(errors => {
+      const next = { ...errors };
+      delete next[key];
+      return next;
+    });
   }
 
   async save(event: Event): Promise<void> {
     event.preventDefault();
     this.isSaving.set(true);
-    this.error.set(null);
+    this.formError.set(null);
+    this.fieldErrors.set({});
     try {
       if (this.formMode() === 'edit' && this.editingId()) {
         const updated = await this.api.update(this.editingId()!, this.form());
@@ -75,26 +110,45 @@ export class ServicesPageComponent implements OnInit {
         this.items.update(items => [created, ...items]);
       }
       this.closeForm();
-    } catch {
-      this.error.set('Erro ao salvar serviço.');
+    } catch (error) {
+      const uiError = mapApiErrorToUi(error, 'Erro ao salvar serviço.');
+      this.fieldErrors.set(uiError.fieldErrors);
+      this.formError.set(uiError.message);
     } finally {
       this.isSaving.set(false);
     }
   }
 
   async deactivate(item: ServiceResponse): Promise<void> {
-    if (!confirm(`Desativar "${item.name}"?`)) return;
+    const confirmed = await this.confirmDialog.open({
+      title: `Desativar "${item.name}"?`,
+      message: 'O serviço deixa de aparecer como ativo para novos agendamentos, mas registros existentes continuam preservados.',
+      confirmLabel: 'Desativar serviço',
+      cancelLabel: 'Manter ativo',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
     try {
       await this.api.deactivate(item.id);
       this.items.update(items =>
         items.map(i => i.id === item.id ? { ...i, status: 'Inactive' as const } : i)
       );
-    } catch {
-      this.error.set('Erro ao desativar serviço.');
+      this.pageError.set(null);
+    } catch (error) {
+      this.pageError.set(mapApiErrorToUi(error, 'Erro ao desativar serviço.').message);
     }
   }
 
-  formatPrice(amount: number): string {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+  async loadMore(): Promise<void> {
+    await this.load(false);
+  }
+
+  fieldError(field: keyof CreateServiceRequest): string | null {
+    return this.fieldErrors()[field]?.[0] ?? null;
+  }
+
+  formatPrice(amount: number, currency: string): string {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount);
   }
 }

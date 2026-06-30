@@ -1,6 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ClientHistoryApiService } from './client-history-api.service';
+import { mapApiErrorToUi } from '../../core/api/api-error.utils';
+import {
+  createCursorPaginationState,
+  loadCursorPage,
+} from '../../core/api/cursor-pagination';
 import type { ClientHistoryEventResponse, ClientHistoryEventType, ClientResponse } from '../../core/api/api.models';
 
 const EVENT_LABELS: Record<ClientHistoryEventType, string> = {
@@ -24,52 +29,46 @@ const EVENT_LABELS: Record<ClientHistoryEventType, string> = {
 export class ClientHistoryPageComponent implements OnInit {
   private readonly api   = inject(ClientHistoryApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly pagination = createCursorPaginationState<ClientHistoryEventResponse>();
 
   readonly client       = signal<ClientResponse | null>(null);
-  readonly events       = signal<ClientHistoryEventResponse[]>([]);
-  readonly nextCursor   = signal<string | null>(null);
-  readonly isLoading    = signal(false);
-  readonly isLoadingMore = signal(false);
+  readonly events       = this.pagination.items;
+  readonly nextCursor   = this.pagination.nextCursor;
+  readonly isLoading    = this.pagination.isLoading;
+  readonly isLoadingMore = this.pagination.isLoadingMore;
+  readonly initialError = this.pagination.initialError;
+  readonly loadMoreError = this.pagination.loadMoreError;
   readonly error        = signal<string | null>(null);
+  private clientId = '';
 
   async ngOnInit(): Promise<void> {
-    const clientId = this.route.snapshot.paramMap.get('clientId') ?? '';
-    await this.load(clientId);
+    this.clientId = this.route.snapshot.paramMap.get('clientId') ?? '';
+    await this.load();
   }
 
-  private async load(clientId: string): Promise<void> {
-    this.isLoading.set(true);
+  async load(reset = true): Promise<void> {
     this.error.set(null);
     try {
-      const [clientRes, historyRes] = await Promise.all([
-        this.api.getClient(clientId),
-        this.api.getHistory(clientId),
-      ]);
-      this.client.set(clientRes);
-      this.events.set(historyRes.items);
-      this.nextCursor.set(historyRes.nextCursor);
-    } catch {
-      this.error.set('Erro ao carregar histórico.');
-    } finally {
-      this.isLoading.set(false);
+      if (reset) {
+        const clientRes = await this.api.getClient(this.clientId);
+        this.client.set(clientRes);
+      }
+
+      await loadCursorPage({
+        state: this.pagination,
+        reset,
+        loadPage: ({ cursor, pageSize }) => this.api.getHistory(this.clientId, cursor, pageSize),
+        fallbackMessage: 'Erro ao carregar histórico.',
+      });
+    } catch (error) {
+      if (reset && !this.events().length) {
+        this.error.set(mapApiErrorToUi(error, 'Erro ao carregar histórico.').message);
+      }
     }
   }
 
   async loadMore(): Promise<void> {
-    const cursor = this.nextCursor();
-    const clientId = this.client()?.id;
-    if (!cursor || !clientId) return;
-
-    this.isLoadingMore.set(true);
-    try {
-      const res = await this.api.getHistory(clientId, cursor);
-      this.events.update(existing => [...existing, ...res.items]);
-      this.nextCursor.set(res.nextCursor);
-    } catch {
-      this.error.set('Erro ao carregar mais eventos.');
-    } finally {
-      this.isLoadingMore.set(false);
-    }
+    await this.load(false);
   }
 
   eventLabel(type: ClientHistoryEventType): string {

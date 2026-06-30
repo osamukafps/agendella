@@ -1,7 +1,21 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { ProfessionalAbsencesApiService } from './professional-absences-api.service';
-import type { ProfessionalAbsenceResponse, CreateProfessionalAbsenceRequest } from '../../core/api/api.models';
+import { ProfessionalsApiService } from '../professionals/professionals-api.service';
+import { mapApiErrorToUi } from '../../core/api/api-error.utils';
+import {
+  createCursorPaginationState,
+  loadCursorPage,
+  mergeCursorItemsById,
+} from '../../core/api/cursor-pagination';
+import type {
+  ProfessionalAbsenceResponse,
+  CreateProfessionalAbsenceRequest,
+  ProfessionalResponse,
+} from '../../core/api/api.models';
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+
+const PROFESSIONALS_PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-professional-absences-page',
@@ -11,41 +25,78 @@ import type { ProfessionalAbsenceResponse, CreateProfessionalAbsenceRequest } fr
 })
 export class ProfessionalAbsencesPageComponent implements OnInit {
   private readonly api  = inject(ProfessionalAbsencesApiService);
+  private readonly professionalsApi = inject(ProfessionalsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   readonly auth         = inject(AuthService);
 
-  readonly professionalId = computed(() => this.auth.currentUser()?.professionalId ?? null);
+  readonly role = this.auth.role;
+  readonly ownProfessionalId = computed(() => this.auth.currentUser()?.professionalId ?? null);
+  private readonly professionalsPagination = createCursorPaginationState<ProfessionalResponse>();
+  private readonly absencesPagination = createCursorPaginationState<ProfessionalAbsenceResponse>();
 
-  readonly items       = signal<ProfessionalAbsenceResponse[]>([]);
-  readonly nextCursor  = signal<string | null>(null);
-  readonly isLoading   = signal(false);
+  readonly professionals = this.professionalsPagination.items;
+  readonly professionalsNextCursor = this.professionalsPagination.nextCursor;
+  readonly isLoadingProfessionals = this.professionalsPagination.isLoading;
+  readonly professionalsError = this.professionalsPagination.initialError;
+  readonly isLoadingMoreProfessionals = this.professionalsPagination.isLoadingMore;
+  readonly items       = this.absencesPagination.items;
+  readonly nextCursor  = this.absencesPagination.nextCursor;
+  readonly isLoading   = this.absencesPagination.isLoading;
+  readonly isLoadingMore = this.absencesPagination.isLoadingMore;
+  readonly initialError = this.absencesPagination.initialError;
+  readonly loadMoreError = this.absencesPagination.loadMoreError;
   readonly isSaving    = signal(false);
-  readonly error       = signal<string | null>(null);
+  readonly pageError   = signal<string | null>(null);
+  readonly formError   = signal<string | null>(null);
   readonly showForm    = signal(false);
+  readonly selectedProfessionalId = signal('');
+  readonly fieldErrors = signal<Record<string, string[]>>({});
 
   readonly formStartLocal = signal('');
   readonly formEndLocal   = signal('');
   readonly formReason     = signal('');
+  readonly activeProfessionalId = computed(() =>
+    this.role() === 'administradora'
+      ? this.selectedProfessionalId()
+      : (this.ownProfessionalId() ?? '')
+  );
+  readonly activeProfessional = computed(() =>
+    this.professionals().find(professional => professional.id === this.selectedProfessionalId()) ?? null
+  );
+  readonly isAdmin = computed(() => this.role() === 'administradora');
 
   async ngOnInit(): Promise<void> {
-    const profId = this.professionalId();
-    if (!profId) {
-      this.error.set('Profissional não identificada.');
+    if (this.isAdmin()) {
+      await this.loadProfessionals();
+      if (this.professionals().length > 0 && !this.selectedProfessionalId()) {
+        await this.selectProfessional(this.professionals()[0]!.id);
+      }
       return;
     }
-    await this.load(profId);
+
+    const profId = this.ownProfessionalId();
+    if (!profId) {
+      this.pageError.set('Profissional não identificada.');
+      return;
+    }
+    await this.load();
   }
 
-  private async load(professionalId: string): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
+  async load(reset = true): Promise<void> {
+    const professionalId = this.activeProfessionalId();
+    if (!professionalId) {
+      return;
+    }
+
     try {
-      const res = await this.api.list(professionalId);
-      this.items.set(res.items);
-      this.nextCursor.set(res.nextCursor);
+      await loadCursorPage({
+        state: this.absencesPagination,
+        reset,
+        loadPage: ({ cursor }) => this.api.list(professionalId, cursor),
+        fallbackMessage: 'Erro ao carregar ausências.',
+      });
     } catch {
-      this.error.set('Erro ao carregar ausências.');
-    } finally {
-      this.isLoading.set(false);
+      // Estado refletido pelo helper compartilhado.
     }
   }
 
@@ -54,18 +105,24 @@ export class ProfessionalAbsencesPageComponent implements OnInit {
     this.formEndLocal.set('');
     this.formReason.set('');
     this.showForm.set(true);
-    this.error.set(null);
+    this.formError.set(null);
+    this.fieldErrors.set({});
   }
 
-  closeForm(): void { this.showForm.set(false); this.error.set(null); }
+  closeForm(): void {
+    this.showForm.set(false);
+    this.formError.set(null);
+    this.fieldErrors.set({});
+  }
 
   async save(event: Event): Promise<void> {
     event.preventDefault();
-    const profId = this.professionalId();
+    const profId = this.activeProfessionalId();
     if (!profId) return;
 
     this.isSaving.set(true);
-    this.error.set(null);
+    this.formError.set(null);
+    this.fieldErrors.set({});
     try {
       const req: CreateProfessionalAbsenceRequest = {
         professionalId: profId,
@@ -76,24 +133,35 @@ export class ProfessionalAbsencesPageComponent implements OnInit {
       const created = await this.api.create(req);
       this.items.update(items => [created, ...items]);
       this.closeForm();
-    } catch {
-      this.error.set('Erro ao criar ausência.');
+    } catch (error) {
+      const uiError = mapApiErrorToUi(error, 'Erro ao criar ausência.');
+      this.fieldErrors.set(uiError.fieldErrors);
+      this.formError.set(uiError.message);
     } finally {
       this.isSaving.set(false);
     }
   }
 
   async cancel(absence: ProfessionalAbsenceResponse): Promise<void> {
-    if (!confirm('Cancelar esta ausência?')) return;
-    const profId = this.professionalId();
+    const confirmed = await this.confirmDialog.open({
+      title: 'Cancelar esta ausência?',
+      message: 'A ausência deixa de ficar ativa para este período, mas o registro permanece no histórico.',
+      confirmLabel: 'Cancelar ausência',
+      cancelLabel: 'Manter ausência',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
+    const profId = this.activeProfessionalId();
     if (!profId) return;
     try {
       await this.api.cancel(profId, absence.id);
       this.items.update(items =>
         items.map(a => a.id === absence.id ? { ...a, status: 'Inactive' as const } : a)
       );
-    } catch {
-      this.error.set('Erro ao cancelar ausência.');
+      this.pageError.set(null);
+    } catch (error) {
+      this.pageError.set(mapApiErrorToUi(error, 'Erro ao cancelar ausência.').message);
     }
   }
 
@@ -102,5 +170,43 @@ export class ProfessionalAbsencesPageComponent implements OnInit {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     }).format(new Date(utc));
+  }
+
+  async selectProfessional(professionalId: string): Promise<void> {
+    this.selectedProfessionalId.set(professionalId);
+    this.absencesPagination.items.set([]);
+    this.absencesPagination.nextCursor.set(null);
+    this.absencesPagination.initialError.set(null);
+    this.absencesPagination.loadMoreError.set(null);
+    this.pageError.set(null);
+    await this.load();
+  }
+
+  async loadMore(): Promise<void> {
+    await this.load(false);
+  }
+
+  async loadProfessionals(reset = true): Promise<void> {
+    try {
+      await loadCursorPage({
+        state: this.professionalsPagination,
+        reset,
+        pageSize: PROFESSIONALS_PAGE_SIZE,
+        loadPage: ({ cursor, pageSize }) => this.professionalsApi.list(cursor, pageSize),
+        mergeItems: mergeCursorItemsById,
+        selectItems: items => items.filter(item => item.status === 'Active'),
+        fallbackMessage: 'Erro ao carregar profissionais.',
+      });
+    } catch {
+      // Estado refletido no helper compartilhado.
+    }
+  }
+
+  async loadMoreProfessionals(): Promise<void> {
+    await this.loadProfessionals(false);
+  }
+
+  fieldError(field: 'professionalId' | 'startAtUtc' | 'endAtUtc' | 'reason'): string | null {
+    return this.fieldErrors()[field]?.[0] ?? null;
   }
 }

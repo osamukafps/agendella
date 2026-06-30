@@ -1,5 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { SalonSettingsApiService } from './salon-settings-api.service';
+import { mapApiErrorToUi } from '../../core/api/api-error.utils';
 import type { SalonSettingsResponse, BusinessHourDto } from '../../core/api/api.models';
 
 export const DAYS_PT: Record<string, string> = {
@@ -8,6 +9,16 @@ export const DAYS_PT: Record<string, string> = {
 };
 
 const DAY_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const COMMON_TIME_ZONES = [
+  'America/Sao_Paulo',
+  'America/Fortaleza',
+  'America/Manaus',
+  'America/Recife',
+  'America/Belem',
+  'America/Cuiaba',
+  'America/New_York',
+  'Europe/Lisbon',
+] as const;
 
 function defaultBusinessHours(): BusinessHourDto[] {
   return DAY_ORDER.map((day, i) => ({
@@ -34,9 +45,15 @@ export class SalonSettingsPageComponent implements OnInit {
   readonly settings    = signal<SalonSettingsResponse | null>(null);
   readonly hours       = signal<BusinessHourDto[]>([]);
   readonly isLoading   = signal(false);
-  readonly isSaving    = signal(false);
-  readonly error       = signal<string | null>(null);
-  readonly saveOk      = signal(false);
+  readonly isSavingSettings = signal(false);
+  readonly isSavingHours = signal(false);
+  readonly settingsError = signal<string | null>(null);
+  readonly hoursError = signal<string | null>(null);
+  readonly settingsSaveOk = signal(false);
+  readonly hoursSaveOk = signal(false);
+  readonly settingsFieldErrors = signal<Record<string, string[]>>({});
+  readonly hoursFieldErrors = signal<Record<string, string[]>>({});
+  readonly hasPersistedBusinessHours = signal(false);
 
   // Form state — settings
   readonly formName        = signal('');
@@ -46,6 +63,10 @@ export class SalonSettingsPageComponent implements OnInit {
   readonly formMinCancel   = signal(0);
 
   readonly daysPt = DAYS_PT;
+  readonly timeZones = COMMON_TIME_ZONES;
+  readonly hasBusinessHoursConfigured = computed(() =>
+    this.hours().some(hour => !hour.isClosed)
+  );
 
   async ngOnInit(): Promise<void> {
     this.isLoading.set(true);
@@ -55,14 +76,17 @@ export class SalonSettingsPageComponent implements OnInit {
         this.api.getBusinessHours(),
       ]);
       this.settings.set(s);
+      this.hasPersistedBusinessHours.set(h.length > 0);
       this.hours.set(h.length > 0 ? sortBusinessHours(h) : defaultBusinessHours());
       this.formName.set(s.name);
       this.formAddress.set(s.address);
       this.formPhone.set(s.phone);
       this.formTimezone.set(s.timeZoneId);
       this.formMinCancel.set(s.minimumCancellationNoticeMinutes);
-    } catch {
-      this.error.set('Erro ao carregar configurações do salão.');
+    } catch (error) {
+      const message = mapApiErrorToUi(error, 'Erro ao carregar configurações do salão.').message;
+      this.settingsError.set(message);
+      this.hoursError.set(message);
     } finally {
       this.isLoading.set(false);
     }
@@ -70,9 +94,10 @@ export class SalonSettingsPageComponent implements OnInit {
 
   async saveSettings(event: Event): Promise<void> {
     event.preventDefault();
-    this.isSaving.set(true);
-    this.error.set(null);
-    this.saveOk.set(false);
+    this.isSavingSettings.set(true);
+    this.settingsError.set(null);
+    this.settingsSaveOk.set(false);
+    this.settingsFieldErrors.set({});
     try {
       const updated = await this.api.updateSettings({
         name: this.formName(),
@@ -82,42 +107,76 @@ export class SalonSettingsPageComponent implements OnInit {
         minimumCancellationNoticeMinutes: this.formMinCancel(),
       });
       this.settings.set(updated);
-      this.saveOk.set(true);
-    } catch {
-      this.error.set('Erro ao salvar configurações.');
+      this.settingsSaveOk.set(true);
+    } catch (error) {
+      const uiError = mapApiErrorToUi(error, 'Erro ao salvar configurações.');
+      this.settingsFieldErrors.set(uiError.fieldErrors);
+      this.settingsError.set(uiError.message);
     } finally {
-      this.isSaving.set(false);
+      this.isSavingSettings.set(false);
     }
   }
 
   toggleHourClosed(index: number): void {
     this.hours.update(h =>
       h.map((item, i) =>
-        i === index ? { ...item, isClosed: !item.isClosed } : item
+        i === index
+          ? {
+            ...item,
+            isClosed: !item.isClosed,
+            startLocalTime: item.startLocalTime ?? '09:00',
+            endLocalTime: item.endLocalTime ?? '18:00',
+          }
+          : item
       )
     );
-    this.saveOk.set(false);
+    this.hoursSaveOk.set(false);
+    this.clearHourFieldErrors(index);
   }
 
   updateHourTime(index: number, field: 'startLocalTime' | 'endLocalTime', value: string): void {
     this.hours.update(h =>
       h.map((item, i) => i === index ? { ...item, [field]: value } : item)
     );
-    this.saveOk.set(false);
+    this.hoursSaveOk.set(false);
+    this.clearHourFieldErrors(index, field);
   }
 
   async saveHours(): Promise<void> {
-    this.isSaving.set(true);
-    this.error.set(null);
-    this.saveOk.set(false);
+    this.isSavingHours.set(true);
+    this.hoursError.set(null);
+    this.hoursSaveOk.set(false);
+    this.hoursFieldErrors.set({});
     try {
       const updated = await this.api.updateBusinessHours(this.hours());
       this.hours.set(sortBusinessHours(updated));
-      this.saveOk.set(true);
-    } catch {
-      this.error.set('Erro ao salvar horários.');
+      this.hasPersistedBusinessHours.set(true);
+      this.hoursSaveOk.set(true);
+    } catch (error) {
+      const uiError = mapApiErrorToUi(error, 'Erro ao salvar horários.');
+      this.hoursFieldErrors.set(uiError.fieldErrors);
+      this.hoursError.set(uiError.message);
     } finally {
-      this.isSaving.set(false);
+      this.isSavingHours.set(false);
     }
+  }
+
+  settingsFieldError(field: string): string | null {
+    return this.settingsFieldErrors()[field]?.[0] ?? null;
+  }
+
+  hourFieldError(index: number, field: 'startLocalTime' | 'endLocalTime' | 'dayOfWeek'): string | null {
+    return this.hoursFieldErrors()[`businessHours[${index}].${field}`]?.[0] ?? null;
+  }
+
+  private clearHourFieldErrors(index: number, ...fields: Array<'startLocalTime' | 'endLocalTime' | 'dayOfWeek'>): void {
+    this.hoursFieldErrors.update(errors => {
+      const next = { ...errors };
+      const keys = fields.length > 0
+        ? fields
+        : (['startLocalTime', 'endLocalTime', 'dayOfWeek'] as const);
+      keys.forEach(field => delete next[`businessHours[${index}].${field}`]);
+      return next;
+    });
   }
 }

@@ -33,6 +33,25 @@ function toStringArray(value: unknown): string[] {
   return [];
 }
 
+function toCamelCaseSegment(value: string): string {
+  return value ? value[0].toLowerCase() + value.slice(1) : value;
+}
+
+function normalizeFieldPath(path: string): string {
+  return path
+    .split('.')
+    .map(segment => {
+      const match = /^([^[\]]+)(.*)$/.exec(segment);
+      if (!match) {
+        return segment;
+      }
+
+      const [, propertyName, suffix] = match;
+      return `${toCamelCaseSegment(propertyName)}${suffix}`;
+    })
+    .join('.');
+}
+
 function extractFieldErrors(details: unknown): Record<string, string[]> {
   if (!isRecord(details)) {
     return {};
@@ -47,7 +66,11 @@ function extractFieldErrors(details: unknown): Record<string, string[]> {
 
     const messages = toStringArray(value);
     if (messages.length > 0) {
-      fieldErrors[key] = messages;
+      const normalizedKey = normalizeFieldPath(key);
+      fieldErrors[normalizedKey] = [
+        ...(fieldErrors[normalizedKey] ?? []),
+        ...messages,
+      ];
     }
   });
 
@@ -58,6 +81,23 @@ function isErrorResponse(value: unknown): value is ErrorResponse {
   return isRecord(value)
     && typeof value['message'] === 'string'
     && typeof value['code'] === 'string';
+}
+
+function defaultMessageForStatus(status: number): string {
+  switch (status) {
+    case 0:
+      return 'Não foi possível se comunicar com o servidor.';
+    case 403:
+      return 'Você não tem permissão para executar esta ação.';
+    case 404:
+      return 'O recurso solicitado não foi encontrado.';
+    case 409:
+      return 'A operação não pôde ser concluída por conflito de dados.';
+    case 422:
+      return 'A operação não pôde ser concluída com os dados informados.';
+    default:
+      return 'Não foi possível concluir a operação.';
+  }
 }
 
 export function mapApiErrorToUi(
@@ -76,11 +116,16 @@ export function mapApiErrorToUi(
 
   const payload = isErrorResponse(error.error) ? error.error : null;
   const details = payload?.details ?? null;
+  const inferredMessage = defaultMessageForStatus(error.status);
+  const message = payload?.message
+    ?? (error.status > 0 ? inferredMessage : fallbackMessage);
 
   return {
     status: error.status,
     code: payload?.code ?? null,
-    message: payload?.message ?? fallbackMessage,
+    message: message === 'Não foi possível concluir a operação.'
+      ? fallbackMessage
+      : message,
     fieldErrors: extractFieldErrors(details),
     details,
   };

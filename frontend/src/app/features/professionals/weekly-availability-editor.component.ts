@@ -1,5 +1,6 @@
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { ProfessionalsApiService } from './professionals-api.service';
+import { mapApiErrorToUi } from '../../core/api/api-error.utils';
 import type { WeeklyAvailabilityEntryDto } from '../../core/api/api.models';
 
 export interface DaySlot {
@@ -67,14 +68,24 @@ export class WeeklyAvailabilityEditorComponent implements OnInit {
   readonly isSaving   = signal(false);
   readonly error      = signal<string | null>(null);
   readonly saveOk     = signal(false);
+  readonly hasLoaded  = signal(false);
+  readonly hasConfiguredAvailability = computed(() =>
+    this.rows().some(row => row.enabled)
+  );
 
   async ngOnInit(): Promise<void> {
+    await this.load();
+  }
+
+  async load(): Promise<void> {
     this.isLoading.set(true);
+    this.error.set(null);
     try {
       const slots = await this.api.getWeeklyAvailability(this.professionalId);
       this.rows.set(slotsToEditorRows(slots));
-    } catch {
-      this.error.set('Erro ao carregar disponibilidade.');
+      this.hasLoaded.set(true);
+    } catch (error) {
+      this.error.set(mapApiErrorToUi(error, 'Erro ao carregar disponibilidade.').message);
     } finally {
       this.isLoading.set(false);
     }
@@ -84,12 +95,15 @@ export class WeeklyAvailabilityEditorComponent implements OnInit {
     this.rows.update(rows =>
       rows.map((r, i) => i === index ? { ...r, enabled: !r.enabled } : r)
     );
+    this.error.set(null);
+    this.saveOk.set(false);
   }
 
   updateTime(index: number, field: 'start' | 'end', value: string): void {
     this.rows.update(rows =>
       rows.map((r, i) => i === index ? { ...r, [field]: value } : r)
     );
+    this.error.set(null);
     this.saveOk.set(false);
   }
 
@@ -111,8 +125,8 @@ export class WeeklyAvailabilityEditorComponent implements OnInit {
       const slots = editorRowsToSlots(this.rows());
       await this.api.updateWeeklyAvailability(this.professionalId, slots);
       this.saveOk.set(true);
-    } catch {
-      this.error.set('Erro ao salvar disponibilidade.');
+    } catch (error) {
+      this.error.set(mapApiErrorToUi(error, 'Erro ao salvar disponibilidade.').message);
     } finally {
       this.isSaving.set(false);
     }

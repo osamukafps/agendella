@@ -10,8 +10,8 @@ import type { CollaboratorRole } from '../auth/auth.models';
 // A integração completa é verificada em testes E2E / browser.
 
 describe('getNavItemsForRole()', () => {
-  it('retorna 5 itens para administradora (Agenda, Clientes, Serviços, Equipe, Bloqueios)', () => {
-    expect(getNavItemsForRole('administradora')).toHaveLength(5);
+  it('retorna 6 itens para administradora (Agenda, Clientes, Serviços, Equipe, Bloqueios, Ausências)', () => {
+    expect(getNavItemsForRole('administradora')).toHaveLength(6);
   });
 
   it('retorna Agenda para administradora', () => {
@@ -39,9 +39,9 @@ describe('getNavItemsForRole()', () => {
     expect(items.find(i => i.id === 'bloqueios')).toBeDefined();
   });
 
-  it('não inclui Ausências para administradora', () => {
+  it('inclui Ausências para administradora', () => {
     const items = getNavItemsForRole('administradora');
-    expect(items.find(i => i.id === 'ausencias')).toBeUndefined();
+    expect(items.find(i => i.id === 'ausencias')).toBeDefined();
   });
 
   it('retorna 4 itens para profissional (Agenda, Clientes, Disponibilidade, Ausências)', () => {
@@ -136,9 +136,9 @@ describe('ALL_NAV_ITEMS', () => {
     expect(disp?.roles).toEqual(['profissional']);
   });
 
-  it('Ausências é restrito ao profissional', () => {
+  it('Ausências é acessível para administradora e profissional', () => {
     const ausencias = ALL_NAV_ITEMS.find(i => i.id === 'ausencias');
-    expect(ausencias?.roles).toEqual(['profissional']);
+    expect(ausencias?.roles).toEqual(['administradora', 'profissional']);
   });
 
   it('Agenda e Clientes são acessíveis a ambos os roles', () => {

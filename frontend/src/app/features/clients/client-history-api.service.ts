@@ -13,8 +13,14 @@ export class ClientHistoryApiService {
     return firstValueFrom(this.http.get<ClientResponse>(`${this.base}/clients/${clientId}`));
   }
 
-  getHistory(clientId: string, cursor?: string): Promise<PaginatedResponse<ClientHistoryEventResponse>> {
-    const params: Record<string, string> = cursor ? { cursor } : {};
+  getHistory(
+    clientId: string,
+    cursor?: string,
+    pageSize?: number,
+  ): Promise<PaginatedResponse<ClientHistoryEventResponse>> {
+    const params: Record<string, string> = {};
+    if (cursor) params['cursor'] = cursor;
+    if (pageSize) params['pageSize'] = String(pageSize);
     return firstValueFrom(
       this.http.get<PaginatedResponse<ClientHistoryEventResponse>>(
         `${this.base}/clients/${clientId}/history`,

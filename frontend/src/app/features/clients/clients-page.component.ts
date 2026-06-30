@@ -2,10 +2,18 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { ClientsApiService, ClientPhoneDuplicateError } from './clients-api.service';
+import { mapApiErrorToUi } from '../../core/api/api-error.utils';
+import {
+  createCursorPaginationState,
+  loadCursorPage,
+  mergeCursorItemsById,
+} from '../../core/api/cursor-pagination';
 import { applyPhoneMask, digitsOnly, formatStoredPhone } from '../../core/utils/phone';
 import type { ClientResponse, CreateClientRequest } from '../../core/api/api.models';
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 
 const EMPTY_FORM: CreateClientRequest = { name: '', phone: '', email: '', notes: '' };
+const CLIENTS_PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-clients-page',
@@ -16,30 +24,40 @@ const EMPTY_FORM: CreateClientRequest = { name: '', phone: '', email: '', notes:
 })
 export class ClientsPageComponent implements OnInit {
   private readonly api  = inject(ClientsApiService);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   readonly auth         = inject(AuthService);
+  private readonly pagination = createCursorPaginationState<ClientResponse>();
 
-  readonly items        = signal<ClientResponse[]>([]);
-  readonly isLoading    = signal(false);
+  readonly items        = this.pagination.items;
+  readonly nextCursor   = this.pagination.nextCursor;
+  readonly isLoading    = this.pagination.isLoading;
+  readonly isLoadingMore = this.pagination.isLoadingMore;
+  readonly initialError = this.pagination.initialError;
+  readonly loadMoreError = this.pagination.loadMoreError;
   readonly isSaving     = signal(false);
-  readonly error        = signal<string | null>(null);
+  readonly pageError    = signal<string | null>(null);
+  readonly formError    = signal<string | null>(null);
   readonly formMode     = signal<'create' | 'edit' | null>(null);
   readonly editingId    = signal<string | null>(null);
   readonly form         = signal<CreateClientRequest>({ ...EMPTY_FORM });
   readonly phoneError   = signal<string | null>(null);
+  readonly fieldErrors  = signal<Record<string, string[]>>({});
   readonly formatStoredPhone = formatStoredPhone;
 
   async ngOnInit(): Promise<void> { await this.load(); }
 
-  async load(): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
+  async load(reset = true): Promise<void> {
     try {
-      const res = await this.api.list();
-      this.items.set(res.items);
+      await loadCursorPage({
+        state: this.pagination,
+        reset,
+        pageSize: CLIENTS_PAGE_SIZE,
+        loadPage: ({ cursor, pageSize }) => this.api.list(cursor, pageSize),
+        mergeItems: mergeCursorItemsById,
+        fallbackMessage: 'Erro ao carregar clientes.',
+      });
     } catch {
-      this.error.set('Erro ao carregar clientes.');
-    } finally {
-      this.isLoading.set(false);
+      // Estado já refletido pelo helper compartilhado.
     }
   }
 
@@ -48,6 +66,8 @@ export class ClientsPageComponent implements OnInit {
     this.editingId.set(null);
     this.formMode.set('create');
     this.phoneError.set(null);
+    this.formError.set(null);
+    this.fieldErrors.set({});
   }
 
   openEdit(item: ClientResponse): void {
@@ -55,21 +75,34 @@ export class ClientsPageComponent implements OnInit {
     this.editingId.set(item.id);
     this.formMode.set('edit');
     this.phoneError.set(null);
+    this.formError.set(null);
+    this.fieldErrors.set({});
   }
 
-  closeForm(): void { this.formMode.set(null); this.error.set(null); this.phoneError.set(null); }
+  closeForm(): void {
+    this.formMode.set(null);
+    this.formError.set(null);
+    this.phoneError.set(null);
+    this.fieldErrors.set({});
+  }
 
   setField<K extends keyof CreateClientRequest>(key: K, value: string): void {
     const processed = key === 'phone' ? applyPhoneMask(value) : value;
     this.form.update(f => ({ ...f, [key]: processed }));
     if (key === 'phone') this.phoneError.set(null);
+    this.fieldErrors.update(errors => {
+      const next = { ...errors };
+      delete next[key];
+      return next;
+    });
   }
 
   async save(event: Event): Promise<void> {
     event.preventDefault();
     this.isSaving.set(true);
-    this.error.set(null);
+    this.formError.set(null);
     this.phoneError.set(null);
+    this.fieldErrors.set({});
     try {
       const payload = { ...this.form(), phone: digitsOnly(this.form().phone) };
       if (this.formMode() === 'edit' && this.editingId()) {
@@ -84,7 +117,9 @@ export class ClientsPageComponent implements OnInit {
       if (err instanceof ClientPhoneDuplicateError) {
         this.phoneError.set(err.message);
       } else {
-        this.error.set('Erro ao salvar cliente.');
+        const uiError = mapApiErrorToUi(err, 'Erro ao salvar cliente.');
+        this.fieldErrors.set(uiError.fieldErrors);
+        this.formError.set(uiError.message);
       }
     } finally {
       this.isSaving.set(false);
@@ -92,14 +127,31 @@ export class ClientsPageComponent implements OnInit {
   }
 
   async deactivate(item: ClientResponse): Promise<void> {
-    if (!confirm(`Desativar ${item.name}?`)) return;
+    const confirmed = await this.confirmDialog.open({
+      title: `Desativar ${item.name}?`,
+      message: 'A cliente deixa de aparecer como ativa nos fluxos operacionais, mas o histórico existente é preservado.',
+      confirmLabel: 'Desativar cliente',
+      cancelLabel: 'Manter ativa',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
     try {
       await this.api.deactivate(item.id);
       this.items.update(items =>
         items.map(i => i.id === item.id ? { ...i, status: 'Inactive' as const } : i)
       );
-    } catch {
-      this.error.set('Erro ao desativar cliente.');
+      this.pageError.set(null);
+    } catch (error) {
+      this.pageError.set(mapApiErrorToUi(error, 'Erro ao desativar cliente.').message);
     }
+  }
+
+  async loadMore(): Promise<void> {
+    await this.load(false);
+  }
+
+  fieldError(field: keyof CreateClientRequest): string | null {
+    return this.fieldErrors()[field]?.[0] ?? null;
   }
 }

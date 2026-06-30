@@ -11,8 +11,15 @@
 
   @if (error()) { <div class="state-error" role="alert">{{ error() }}</div> }
 
-  @if (isLoading()) {
+  @if (isLoading() && !events().length) {
     <div class="state-loading">Carregando histórico…</div>
+  } @else if (initialError() && !events().length) {
+    <div class="state-error" role="alert">
+      {{ initialError() }}
+      <div class="state-actions">
+        <button class="btn-secondary" type="button" (click)="load()">Tentar novamente</button>
+      </div>
+    </div>
   } @else {
     <ul class="items-list" role="list" aria-label="Histórico de eventos">
       @for (evt of events(); track evt.id) {
@@ -31,7 +38,10 @@
     </ul>
 
     @if (nextCursor()) {
-      <div style="text-align: center; padding: var(--space-4)">
+      <div class="list-footer">
+        @if (loadMoreError()) {
+          <div class="state-error" role="alert">{{ loadMoreError() }}</div>
+        }
         <button class="btn-ghost" (click)="loadMore()" [disabled]="isLoadingMore()">
           {{ isLoadingMore() ? 'Carregando…' : 'Carregar mais' }}
         </button>

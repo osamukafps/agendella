@@ -4,35 +4,68 @@
     <button class="btn-add" (click)="openCreate()" aria-label="Novo serviço">+ Novo</button>
   </header>
 
-  @if (error()) { <div class="state-error" role="alert">{{ error() }}</div> }
+  @if (pageError()) { <div class="state-error" role="alert">{{ pageError() }}</div> }
 
   @if (formMode()) {
     <div class="form-card">
       <h3 class="form-title">{{ formMode() === 'create' ? 'Novo serviço' : 'Editar serviço' }}</h3>
       <form (submit)="save($event)" novalidate>
+        @if (formError()) {
+          <div class="state-error" role="alert">{{ formError() }}</div>
+        }
+
         <div class="field">
           <label class="field-label" for="svc-name">Nome</label>
           <input id="svc-name" class="field-input" type="text" required
-            [value]="form().name" (input)="setField('name', $any($event.target).value)">
+            [value]="form().name"
+            (input)="setField('name', $any($event.target).value)"
+            [attr.aria-invalid]="fieldError('name') ? 'true' : null">
+          @if (fieldError('name')) {
+            <span class="field-error" role="alert">{{ fieldError('name') }}</span>
+          }
         </div>
         <div class="field">
           <label class="field-label" for="svc-desc">Descrição</label>
           <input id="svc-desc" class="field-input" type="text"
-            [value]="form().description" (input)="setField('description', $any($event.target).value)">
+            [value]="form().description"
+            (input)="setField('description', $any($event.target).value)"
+            [attr.aria-invalid]="fieldError('description') ? 'true' : null">
+          @if (fieldError('description')) {
+            <span class="field-error" role="alert">{{ fieldError('description') }}</span>
+          }
         </div>
         <div class="fields-row">
           <div class="field">
             <label class="field-label" for="svc-dur">Duração (min)</label>
             <input id="svc-dur" class="field-input" type="number" min="1" required
               [value]="form().durationMinutes"
-              (input)="setField('durationMinutes', +$any($event.target).value)">
+              (input)="setField('durationMinutes', +$any($event.target).value)"
+              [attr.aria-invalid]="fieldError('durationMinutes') ? 'true' : null">
+            @if (fieldError('durationMinutes')) {
+              <span class="field-error" role="alert">{{ fieldError('durationMinutes') }}</span>
+            }
           </div>
           <div class="field">
-            <label class="field-label" for="svc-price">Preço (R$)</label>
+            <label class="field-label" for="svc-price">Preço</label>
             <input id="svc-price" class="field-input" type="number" min="0" step="0.01"
               [value]="form().priceAmount"
-              (input)="setField('priceAmount', +$any($event.target).value)">
+              (input)="setField('priceAmount', +$any($event.target).value)"
+              [attr.aria-invalid]="fieldError('priceAmount') ? 'true' : null">
+            @if (fieldError('priceAmount')) {
+              <span class="field-error" role="alert">{{ fieldError('priceAmount') }}</span>
+            }
           </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="svc-currency">Moeda</label>
+          <input id="svc-currency" class="field-input" type="text" maxlength="3" required
+            placeholder="BRL"
+            [value]="form().currency"
+            (input)="setField('currency', $any($event.target).value)"
+            [attr.aria-invalid]="fieldError('currency') ? 'true' : null">
+          @if (fieldError('currency')) {
+            <span class="field-error" role="alert">{{ fieldError('currency') }}</span>
+          }
         </div>
         <div class="form-actions">
           <button type="button" class="btn-ghost" (click)="closeForm()">Cancelar</button>
@@ -44,15 +77,22 @@
     </div>
   }
 
-  @if (isLoading()) {
+  @if (isLoading() && !items().length) {
     <div class="state-loading">Carregando…</div>
+  } @else if (initialError() && !items().length) {
+    <div class="state-error" role="alert">
+      {{ initialError() }}
+      <div class="state-actions">
+        <button class="btn-secondary" type="button" (click)="load()">Tentar novamente</button>
+      </div>
+    </div>
   } @else {
     <ul class="items-list" role="list">
       @for (item of items(); track item.id) {
         <li class="item-card" [class.item-card--inactive]="item.status === 'Inactive'">
           <div class="item-info">
             <span class="item-name">{{ item.name }}</span>
-            <span class="item-meta">{{ item.durationMinutes }} min · {{ formatPrice(item.priceAmount) }}</span>
+            <span class="item-meta">{{ item.durationMinutes }} min · {{ formatPrice(item.priceAmount, item.currency) }} · {{ item.currency }}</span>
           </div>
           <div class="item-actions">
             <button class="btn-icon" (click)="openEdit(item)" aria-label="Editar {{ item.name }}">✎</button>
@@ -66,5 +106,16 @@
         <li class="state-empty">Nenhum serviço cadastrado.</li>
       }
     </ul>
+
+    @if (items().length && nextCursor()) {
+      <div class="list-footer">
+        @if (loadMoreError()) {
+          <div class="state-error" role="alert">{{ loadMoreError() }}</div>
+        }
+        <button class="btn-secondary" type="button" (click)="loadMore()" [disabled]="isLoadingMore()">
+          {{ isLoadingMore() ? 'Carregando…' : 'Carregar mais' }}
+        </button>
+      </div>
+    }
   }
 </div>
