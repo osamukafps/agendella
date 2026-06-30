@@ -33,6 +33,9 @@ export function getNavItemsForRole(role: CollaboratorRole | null): NavItem[] {
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ConfirmDialogComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css',
+  host: {
+    '[class.shell--sidebar-collapsed]': 'isSidebarCollapsed()',
+  },
 })
 export class AppShellComponent implements OnDestroy {
   private readonly authService = inject(AuthService);
@@ -48,7 +51,14 @@ export class AppShellComponent implements OnDestroy {
   readonly navItems    = computed(() => getNavItemsForRole(this.authService.role()));
   readonly menuOpen    = signal(false);
   readonly isDesktop   = signal(this.readDesktopBreakpoint());
+  readonly isSidebarViewport = signal(this.readSidebarBreakpoint());
+  readonly isSidebarCollapsed = signal(false);
   readonly topbarAction = this.shellTopbar.action;
+  readonly sidebarToggleLabel = computed(() =>
+    this.isSidebarCollapsed()
+      ? 'Expandir navegação lateral'
+      : 'Recolher navegação lateral'
+  );
 
   readonly todayLabel = computed(() =>
     new Intl.DateTimeFormat('pt-BR', {
@@ -105,6 +115,10 @@ export class AppShellComponent implements OnDestroy {
     return typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
   }
 
+  private readSidebarBreakpoint(): boolean {
+    return typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches;
+  }
+
   ngOnDestroy(): void {
     if (this.clockTimerId !== null) {
       window.clearInterval(this.clockTimerId);
@@ -118,6 +132,14 @@ export class AppShellComponent implements OnDestroy {
 
   closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  toggleSidebar(): void {
+    if (!this.isSidebarViewport()) {
+      return;
+    }
+
+    this.isSidebarCollapsed.update(value => !value);
   }
 
   async logout(): Promise<void> {
@@ -142,5 +164,6 @@ export class AppShellComponent implements OnDestroy {
   @HostListener('window:resize')
   onResize(): void {
     this.isDesktop.set(this.readDesktopBreakpoint());
+    this.isSidebarViewport.set(this.readSidebarBreakpoint());
   }
 }

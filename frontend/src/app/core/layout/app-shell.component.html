@@ -1,12 +1,32 @@
 <div class="shell-body">
   <aside class="side-nav" aria-label="Navegação principal">
     <div class="side-nav__panel">
-      <div class="side-nav__brand">
-        <span class="side-nav__badge">{{ avatarLabel() }}</span>
-        <div>
-          <p>Agendella</p>
-          <span>{{ roleContextLabel() }}</span>
+      <div class="side-nav__header">
+        <div class="side-nav__brand">
+          <span class="side-nav__badge">{{ avatarLabel() }}</span>
+          <div class="side-nav__brand-copy">
+            <p>Agendella</p>
+            <span>{{ roleContextLabel() }}</span>
+          </div>
         </div>
+
+        <button
+          type="button"
+          class="side-nav__toggle"
+          [attr.aria-label]="sidebarToggleLabel()"
+          [attr.aria-pressed]="isSidebarCollapsed()"
+          [attr.aria-expanded]="!isSidebarCollapsed()"
+          (click)="toggleSidebar()"
+        >
+          <svg class="side-nav__toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            @if (isSidebarCollapsed()) {
+              <polyline points="9 18 15 12 9 6"/>
+            } @else {
+              <polyline points="15 18 9 12 15 6"/>
+            }
+          </svg>
+        </button>
       </div>
 
       <nav class="side-nav__menu" aria-label="Navegação principal no desktop">
@@ -15,6 +35,8 @@
             class="nav-item nav-item--desktop"
             [routerLink]="item.route"
             routerLinkActive="nav-item--active"
+            [attr.title]="isSidebarCollapsed() ? item.label : null"
+            [attr.aria-label]="isSidebarCollapsed() ? item.label : null"
           >
             @switch (item.id) {
               @case ('agenda') {
