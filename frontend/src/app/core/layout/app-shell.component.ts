@@ -40,6 +40,7 @@ export class AppShellComponent {
   readonly role        = this.authService.role;
   readonly navItems    = computed(() => getNavItemsForRole(this.authService.role()));
   readonly menuOpen    = signal(false);
+  readonly isDesktop   = signal(this.readDesktopBreakpoint());
 
   readonly todayLabel = computed(() =>
     new Intl.DateTimeFormat('pt-BR', {
@@ -48,6 +49,10 @@ export class AppShellComponent {
       month: 'long',
     }).format(new Date())
   );
+
+  readonly roleLabel = computed(() => this.role() === 'administradora'
+    ? 'Gestão do salão'
+    : 'Rotina profissional');
 
   readonly avatarLabel = computed(() => {
     const name = this.authService.currentUser()?.displayName;
@@ -61,6 +66,10 @@ export class AppShellComponent {
   readonly salonName = computed(() =>
     this.authService.currentUser()?.salonName ?? ''
   );
+
+  private readDesktopBreakpoint(): boolean {
+    return typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+  }
 
   toggleMenu(event: MouseEvent): void {
     event.stopPropagation();
@@ -88,5 +97,10 @@ export class AppShellComponent {
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.menuOpen.set(false);
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.isDesktop.set(this.readDesktopBreakpoint());
   }
 }

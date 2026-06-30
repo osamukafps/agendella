@@ -34,11 +34,18 @@ import type { AppointmentResponse } from '../../core/api/api.models';
   `,
   styles: [`
     .appt-card {
-      background: var(--color-surface); border: 1px solid var(--color-border-subtle);
-      border-radius: var(--radius-lg); padding: var(--space-3);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-left: 3px solid var(--color-primary);
+      border-radius: 18px;
+      padding: var(--space-4);
+      box-shadow: var(--shadow-sm);
     }
-    .appt-card--review { border-color: var(--color-warning); }
-    .appt-card--done   { opacity: 0.65; }
+    .appt-card--review {
+      border-left-color: var(--color-warning);
+      border-color: var(--color-border);
+    }
+    .appt-card--done   { opacity: 0.7; }
     .review-banner {
       display: flex; align-items: flex-start; gap: var(--space-2);
       background: var(--color-warning-subtle); border-radius: var(--radius-md);
@@ -52,17 +59,17 @@ import type { AppointmentResponse } from '../../core/api/api.models';
       font-size: var(--text-xs); color: var(--color-text-secondary); line-height: 1.4;
     }
     .appt-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
-    .appt-names  { display: flex; flex-direction: column; gap: 2px; }
-    .appt-client { font-weight: 600; font-size: var(--text-sm); color: var(--color-text-primary); }
-    .appt-service { font-size: var(--text-xs); color: var(--color-text-secondary); }
-    .appt-prof   { font-size: var(--text-xs); color: var(--color-text-tertiary); }
+    .appt-names  { display: flex; flex-direction: column; gap: 4px; }
+    .appt-client { font-weight: 600; font-size: var(--text-base); color: var(--color-text-primary); line-height: 1.2; }
+    .appt-service { font-size: var(--text-sm); color: var(--color-text-secondary); }
+    .appt-prof   { font-size: var(--text-sm); color: var(--color-text-tertiary); }
     .appt-badge  {
-      flex-shrink: 0; font-size: var(--text-xs); font-weight: 700; border-radius: var(--radius-pill);
-      padding: 2px 8px; white-space: nowrap;
+      flex-shrink: 0; font-size: var(--text-xs); font-weight: 600; border-radius: var(--radius-pill);
+      padding: 4px 8px; white-space: nowrap; letter-spacing: 0.05em;
     }
     .badge-scheduled { background: var(--color-primary-subtle); color: var(--color-primary); }
-    .badge-completed { background: var(--color-success-subtle); color: var(--color-success); }
-    .badge-cancelled { background: var(--color-neutral-100);    color: var(--color-text-secondary); }
+    .badge-completed { background: var(--color-neutral-100); color: var(--color-neutral-600); }
+    .badge-cancelled { background: var(--color-error-subtle); color: var(--color-error); }
     .badge-noshow    { background: var(--color-error-subtle);   color: var(--color-error); }
     .badge-review    { background: var(--color-warning-subtle); color: var(--color-warning); }
   `],

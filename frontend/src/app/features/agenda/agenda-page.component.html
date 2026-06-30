@@ -1,52 +1,168 @@
-<section class="daily-agenda" aria-labelledby="agenda-title">
-  <header class="daily-agenda__header">
-    <p class="daily-agenda__kicker">Agenda diária</p>
-    <div class="daily-agenda__title-row">
-      <h1 id="agenda-title">{{ dayLabel }}</h1>
-      <span>{{ salonName }}</span>
+<section class="agenda-page" aria-labelledby="agenda-heading">
+  <header class="agenda-hero">
+    <div class="agenda-hero__copy">
+      <p class="agenda-hero__eyebrow">{{ salonName() }}</p>
+      <h1 id="agenda-heading">Bom dia, {{ greetingName() }}</h1>
+      <p class="agenda-hero__date">{{ dayLabel }}</p>
     </div>
   </header>
 
-  <ol
-    class="timeline"
-    aria-label="Timeline de agendamentos de segunda-feira, 29 de junho de 2026"
-  >
-    @for (slot of timeSlots; track slot.time) {
-      <li class="timeline__slot" [style.grid-row]="slot.gridRow">
-        @if (slot.label) {
-          <time class="timeline__time" [attr.datetime]="slot.time">{{ slot.label }}</time>
+  <div class="agenda-layout">
+    <section class="agenda-board" aria-labelledby="timeline-title">
+      <header class="agenda-board__header">
+        <div class="agenda-board__title">
+          <p class="agenda-board__kicker">Agenda do dia</p>
+          <h2 id="timeline-title">Hoje · {{ appointments.length }} atendimentos</h2>
+        </div>
+
+        <div class="view-mode" aria-label="Modo de visualização">
+          @for (mode of viewModes; track mode.id) {
+            <button
+              class="view-mode__button"
+              type="button"
+              [class.view-mode__button--active]="mode.active"
+              [attr.aria-pressed]="mode.active"
+            >
+              {{ mode.label }}
+            </button>
+          }
+        </div>
+      </header>
+
+      <div class="day-selector" aria-label="Dias da semana">
+        @for (day of weekDays; track day.id) {
+          <button
+            class="day-chip"
+            type="button"
+            [class.day-chip--today]="day.isToday"
+            [class.day-chip--weekend]="day.isWeekend"
+            [attr.aria-pressed]="day.isToday"
+          >
+            <span class="day-chip__weekday">{{ day.weekday }}</span>
+            <span class="day-chip__day">{{ day.dayNumber }}</span>
+          </button>
         }
-      </li>
-    }
+      </div>
 
-    <li class="timeline__now" [style.--now-top]="nowLineTop" aria-hidden="true">
-      <span>Agora</span>
-    </li>
+      <ul class="status-legend" aria-label="Legenda de status">
+        @for (status of statusLegend; track status.id) {
+          <li>
+            <span class="status-legend__dot" [style.--legend-color]="status.color"></span>
+            <span>{{ status.label }}</span>
+          </li>
+        }
+      </ul>
 
-    @for (appointment of appointments; track appointment.id) {
-      <li class="timeline__appointment" [style.grid-row]="appointment.gridRow">
-        <article
-          class="appointment-card"
-          [class.appointment-card--active]="appointment.statusTone === 'active'"
-          [class.appointment-card--completed]="appointment.statusTone === 'completed'"
-          [class.appointment-card--review]="appointment.statusTone === 'review'"
-          [style.--status-color]="appointment.statusColor"
-          [attr.aria-label]="appointment.startTime + ', ' + appointment.clientName + ', ' + appointment.statusLabel"
+      <div class="timeline-wrapper">
+        <ol
+          class="timeline"
+          [attr.aria-label]="'Timeline de agendamentos de ' + dayLabel"
         >
-          <div class="appointment-card__meta">
-            <time [attr.datetime]="appointment.startTime">
-              {{ appointment.startTime }}-{{ appointment.endTime }}
-            </time>
-            <span class="appointment-card__status">{{ appointment.statusLabel }}</span>
-          </div>
+          @for (slot of timeSlots; track slot.time) {
+            <li
+              class="timeline__slot"
+              [class.timeline__slot--hour]="slot.isHour"
+              [style.grid-row]="slot.gridRow"
+            >
+              @if (slot.label) {
+                <time class="timeline__time" [attr.datetime]="slot.time">
+                  <span class="timeline__time-dot" aria-hidden="true"></span>
+                  {{ slot.label }}
+                </time>
+              }
+            </li>
+          }
 
-          <div class="appointment-card__body">
-            <h2>{{ appointment.clientName }}</h2>
-            <p>{{ appointment.serviceName }}</p>
-            <span>{{ appointment.professionalName }}</span>
-          </div>
-        </article>
-      </li>
-    }
-  </ol>
+          <li class="timeline__now" [style.--now-top]="nowLineTop" aria-hidden="true">
+            <span class="timeline__now-dot"></span>
+          </li>
+
+          @for (appointment of appointments; track appointment.id) {
+            <li class="timeline__appointment" [style.grid-row]="appointment.gridRow">
+              <article
+                class="appointment-card"
+                [class.appointment-card--active]="appointment.statusTone === 'active'"
+                [class.appointment-card--completed]="appointment.statusTone === 'completed'"
+                [class.appointment-card--review]="appointment.statusTone === 'review'"
+                [class.appointment-card--cancelled]="appointment.statusTone === 'cancelled'"
+                [style.--status-color]="appointment.statusColor"
+                [style.--status-bg]="appointment.statusBackground"
+                [attr.aria-label]="appointment.startTime + ', ' + appointment.clientName + ', ' + appointment.statusLabel"
+              >
+                <div class="appointment-card__meta">
+                  <time [attr.datetime]="appointment.startTime">
+                    {{ appointment.startTime }} - {{ appointment.endTime }}
+                  </time>
+                  <span class="appointment-card__status">{{ appointment.statusLabel }}</span>
+                </div>
+
+                <div class="appointment-card__body">
+                  <h3>{{ appointment.clientName }}</h3>
+                  <p>{{ appointment.serviceName }}</p>
+                  <span>{{ appointment.professionalName }} · {{ appointment.details }}</span>
+                </div>
+              </article>
+            </li>
+          }
+        </ol>
+      </div>
+    </section>
+
+    <aside class="agenda-sidebar" aria-label="Indicadores e insights">
+      <section class="sidebar-card">
+        <header class="sidebar-card__header">
+          <p>Agenda do dia</p>
+          <h2>{{ appointments.length }} atendimentos</h2>
+        </header>
+
+        <div class="day-summary">
+          <p>Maior movimento entre 10h30 e 15h30.</p>
+          <p>Status dominante: <strong>Confirmado e em atendimento.</strong></p>
+        </div>
+
+        <div class="svg-placeholder">
+          <span>Placeholder SVG</span>
+          <small>Ilustração futura</small>
+        </div>
+      </section>
+
+      <section class="sidebar-card">
+        <header class="sidebar-card__header">
+          <p>Resumo do mês</p>
+          <h2>Indicadores</h2>
+        </header>
+
+        <div class="metric-grid">
+          @for (metric of summaryMetrics; track metric.id) {
+            <article class="metric-card">
+              <span class="metric-card__label">{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+              <p>{{ metric.detail }}</p>
+            </article>
+          }
+        </div>
+      </section>
+
+      <section class="sidebar-card sidebar-card--accent">
+        <header class="sidebar-card__header">
+          <p>Insights do mês</p>
+          <h2>Pequenas descobertas, grandes resultados.</h2>
+        </header>
+
+        <ul class="insight-list">
+          @for (insight of insights; track insight.id) {
+            <li>
+              <span class="insight-list__bullet" aria-hidden="true"></span>
+              <p>{{ insight.text }} <strong>{{ insight.emphasis }}</strong></p>
+            </li>
+          }
+        </ul>
+
+        <div class="svg-placeholder svg-placeholder--soft">
+          <span>Ilustração futura</span>
+          <small>Reserva visual para SVG editorial</small>
+        </div>
+      </section>
+    </aside>
+  </div>
 </section>

@@ -16,7 +16,10 @@ body {
   margin: 0;
   min-height: 100vh;
   min-height: -webkit-fill-available;
-  background: var(--color-background);
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(168, 94, 116, 0.1), transparent 30%),
+    linear-gradient(180deg, #fffdfb 0%, var(--color-background) 36%, #f8f5f1 100%);
   color: var(--color-text-primary);
   font-family: var(--font-body);
   font-size: 1rem;
@@ -42,4 +45,90 @@ a {
 
 button {
   cursor: pointer;
+  font: inherit;
+}
+
+app-agenda-page .day-summary p,
+app-agenda-page .metric-card p,
+app-agenda-page .insight-list p,
+app-agenda-page .svg-placeholder small {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+app-agenda-page .day-summary strong,
+app-agenda-page .insight-list strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+app-agenda-page .metric-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+app-agenda-page .metric-card {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid rgba(231, 229, 228, 0.92);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+app-agenda-page .metric-card strong {
+  font-family: var(--font-display);
+  font-size: 1.95rem;
+}
+
+app-agenda-page .insight-list {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+app-agenda-page .insight-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+app-agenda-page .insight-list__bullet {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+app-agenda-page .svg-placeholder {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  min-height: 140px;
+  padding: var(--space-4);
+  border: 1px dashed rgba(124, 59, 80, 0.28);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(245, 232, 237, 0.72), rgba(245, 245, 244, 0.9));
+  text-align: center;
+}
+
+app-agenda-page .svg-placeholder span {
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+}
+
+app-agenda-page .svg-placeholder--soft {
+  min-height: 120px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(245, 245, 244, 0.92));
 }
