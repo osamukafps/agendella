@@ -1,20 +1,4 @@
-<section class="agenda-page" aria-labelledby="agenda-heading">
-  <header class="agenda-hero">
-    <div class="agenda-hero__copy">
-      <p class="agenda-hero__eyebrow">{{ salonName() }}</p>
-      <h1 id="agenda-heading">Bom dia, {{ userName() }}</h1>
-      <p class="agenda-hero__date">{{ dayLabel() }}</p>
-    </div>
-
-    @if (summary().nextAppointment && !isLoading() && !isMineUnavailable()) {
-      <div class="agenda-hero__highlight" aria-label="Próximo destaque do dia">
-        <span>Próximo destaque</span>
-        <strong>{{ summary().nextAppointment?.timeRangeLabel }}</strong>
-        <p>{{ summary().nextAppointment?.clientName }} · {{ summary().nextAppointment?.serviceName }}</p>
-      </div>
-    }
-  </header>
-
+<section class="agenda-page" aria-label="Agenda">
   <div class="agenda-layout">
     <section class="agenda-board" aria-labelledby="timeline-title">
       <header class="agenda-board__header">
@@ -22,11 +6,6 @@
           <p class="agenda-board__kicker">{{ scope === 'mine' ? 'Minha agenda' : 'Agenda real' }}</p>
           <h2 id="timeline-title">{{ dayLabel() }}</h2>
           <p class="agenda-board__hours">Funcionamento do dia: {{ selectedDayBusinessHoursLabel() }}</p>
-          @if (showCreateAction()) {
-            <button class="agenda-create-button agenda-create-button--inline" type="button" (click)="openCreateSheet()">
-              Novo agendamento
-            </button>
-          }
         </div>
 
         <div class="agenda-board__controls">

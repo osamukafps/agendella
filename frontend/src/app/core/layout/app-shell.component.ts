@@ -1,8 +1,9 @@
 import { AuthService } from './../auth/auth.service';
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import type { CollaboratorRole } from '../auth/auth.models';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
+import { ShellTopbarService } from './shell-topbar.service';
 
 export interface NavItem {
   id: string;
@@ -33,27 +34,54 @@ export function getNavItemsForRole(role: CollaboratorRole | null): NavItem[] {
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css',
 })
-export class AppShellComponent {
+export class AppShellComponent implements OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router      = inject(Router);
+  private readonly shellTopbar = inject(ShellTopbarService);
+  private readonly currentDateTime = signal(new Date());
+  private readonly clockTimerId = typeof window === 'undefined'
+    ? null
+    : window.setInterval(() => this.currentDateTime.set(new Date()), 60_000);
 
   readonly currentUser = this.authService.currentUser;
   readonly role        = this.authService.role;
   readonly navItems    = computed(() => getNavItemsForRole(this.authService.role()));
   readonly menuOpen    = signal(false);
   readonly isDesktop   = signal(this.readDesktopBreakpoint());
+  readonly topbarAction = this.shellTopbar.action;
 
   readonly todayLabel = computed(() =>
     new Intl.DateTimeFormat('pt-BR', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-    }).format(new Date())
+      year: 'numeric',
+    }).format(this.currentDateTime())
   );
 
-  readonly roleLabel = computed(() => this.role() === 'administradora'
+  readonly firstName = computed(() => {
+    const displayName = this.currentUser()?.displayName?.trim();
+    return displayName ? displayName.split(/\s+/)[0] : 'Beleza';
+  });
+
+  readonly greetingLabel = computed(() => {
+    const hour = this.currentDateTime().getHours();
+    const greeting = hour < 12
+      ? 'Bom dia'
+      : hour < 18
+        ? 'Boa tarde'
+        : 'Boa noite';
+
+    return `${greeting}, ${this.firstName()}`;
+  });
+
+  readonly roleContextLabel = computed(() => this.role() === 'administradora'
     ? 'Gestão do salão'
     : 'Rotina profissional');
+
+  readonly roleDisplayLabel = computed(() => this.role() === 'administradora'
+    ? 'Administradora'
+    : 'Profissional');
 
   readonly avatarLabel = computed(() => {
     const name = this.authService.currentUser()?.displayName;
@@ -68,8 +96,19 @@ export class AppShellComponent {
     this.authService.currentUser()?.salonName ?? ''
   );
 
+  readonly salonContextLabel = computed(() => {
+    const salonName = this.salonName().trim();
+    return salonName ? salonName.toUpperCase() : 'AGENDELLA';
+  });
+
   private readDesktopBreakpoint(): boolean {
     return typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches;
+  }
+
+  ngOnDestroy(): void {
+    if (this.clockTimerId !== null) {
+      window.clearInterval(this.clockTimerId);
+    }
   }
 
   toggleMenu(event: MouseEvent): void {
@@ -90,7 +129,7 @@ export class AppShellComponent {
   @HostListener('document:click', ['$event.target'])
   onClickOutside(target: EventTarget | null): void {
     if (!this.menuOpen()) return;
-    if (!(target as HTMLElement | null)?.closest?.('.header-menu-wrapper')) {
+    if (!(target as HTMLElement | null)?.closest?.('.topbar-profile')) {
       this.menuOpen.set(false);
     }
   }

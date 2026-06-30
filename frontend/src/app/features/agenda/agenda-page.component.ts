@@ -8,6 +8,7 @@ import { SalonSettingsApiService } from '../salon-settings/salon-settings-api.se
 import { AppointmentCardComponent } from './appointment-card.component';
 import { AppointmentFormComponent } from './appointment-form.component';
 import { AppointmentActionsComponent } from './appointment-actions.component';
+import { ShellTopbarService } from '../../core/layout/shell-topbar.service';
 import { getApiErrorMessage } from '../../core/api/api-error.utils';
 import { collectCursorPages } from '../../core/api/cursor-pagination';
 import {
@@ -141,6 +142,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
   private readonly professionalsApi = inject(ProfessionalsApiService);
   private readonly servicesApi = inject(ServicesApiService);
   private readonly salonSettingsApi = inject(SalonSettingsApiService);
+  private readonly shellTopbar = inject(ShellTopbarService);
 
   private readonly currentDateTime = signal(new Date());
   private readonly nowTimerId = typeof window === 'undefined'
@@ -169,15 +171,6 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     { id: 'no-show', label: 'Não compareceu', color: 'var(--color-error)' },
     { id: 'review', label: 'Requer revisão', color: 'var(--color-warning)' },
   ];
-
-  protected readonly userName = computed(() => {
-    const displayName = this.authService.currentUser()?.displayName?.trim();
-    return displayName ? displayName.split(/\s+/)[0] : 'Profissional';
-  });
-
-  protected readonly salonName = computed(() =>
-    this.authService.currentUser()?.salonName?.trim() || 'Seu salão'
-  );
 
   protected readonly isMineUnavailable = computed(() =>
     this.scope === 'mine' && !this.authService.currentUser()?.professionalId
@@ -331,13 +324,29 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
   ]);
 
   async ngOnInit(): Promise<void> {
+    this.syncTopbarAction();
     await this.refreshAgenda();
   }
 
   ngOnDestroy(): void {
+    this.shellTopbar.clearAction();
+
     if (this.nowTimerId !== null) {
       window.clearInterval(this.nowTimerId);
     }
+  }
+
+  private syncTopbarAction(): void {
+    if (!this.showCreateAction()) {
+      this.shellTopbar.clearAction();
+      return;
+    }
+
+    this.shellTopbar.setAction({
+      label: 'Novo agendamento',
+      ariaLabel: 'Criar novo agendamento',
+      onClick: () => this.openCreateSheet(),
+    });
   }
 
   protected async selectDay(date: string): Promise<void> {
