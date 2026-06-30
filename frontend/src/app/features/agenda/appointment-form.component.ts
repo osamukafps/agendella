@@ -5,7 +5,7 @@ import { ProfessionalsApiService } from '../professionals/professionals-api.serv
 import { ClientsApiService } from '../clients/clients-api.service';
 import { ServicesApiService } from '../services/services-api.service';
 import { ClientQuickFormComponent } from '../clients/client-quick-form.component';
-import { conflictTypeLabel, formatDuration } from './agenda-utils';
+import { conflictTypeLabel, formatDuration, formatDurationMinutes } from './agenda-utils';
 import { getApiErrorMessage, mapApiErrorToUi } from '../../core/api/api-error.utils';
 import type {
   AppointmentResponse,
@@ -72,6 +72,11 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
   @Input() mode: 'create' | 'reschedule' = 'create';
   @Input() appointmentId?: string;
   @Input() currentProfessionalId?: string;
+  @Input() currentProfessionalName = '';
+  @Input() currentClientName = '';
+  @Input() currentServiceName = '';
+  @Input() currentTimeRangeLabel = '';
+  @Input() currentDurationMinutes = 0;
   @Input() preferredDate = '';
   @Input() preferredProfessionalId?: string;
 
@@ -143,6 +148,12 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
   );
 
   protected readonly durationLabel = computed(() => {
+    if (this.mode === 'reschedule') {
+      return this.currentDurationMinutes > 0
+        ? formatDurationMinutes(this.currentDurationMinutes)
+        : '';
+    }
+
     const service = this.selectedService();
     if (!service) {
       return '';
@@ -152,12 +163,22 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
     return formatDuration('2024-01-01T00:00:00Z', end.toISOString());
   });
 
-  protected readonly durationMinutes = computed(() => this.selectedService()?.durationMinutes ?? 0);
+  protected readonly durationMinutes = computed(() =>
+    this.mode === 'reschedule'
+      ? this.currentDurationMinutes
+      : (this.selectedService()?.durationMinutes ?? 0)
+  );
 
   protected readonly activeProfessionalId = computed(() =>
     this.mode === 'reschedule'
       ? (this.currentProfessionalId ?? '')
       : this.selectedProfId()
+  );
+
+  protected readonly activeProfessionalName = computed(() =>
+    this.mode === 'reschedule'
+      ? (this.currentProfessionalName || 'Profissional atual')
+      : (this.selectedProfessional()?.name ?? '')
   );
 
   protected readonly canSubmit = computed(() => {

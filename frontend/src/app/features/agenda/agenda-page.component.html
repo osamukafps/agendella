@@ -104,13 +104,14 @@
             <p>Escolha outro dia da semana para consultar a agenda real carregada pelo sistema.</p>
           </div>
         } @else {
-          <ol
+          <div
             class="timeline"
             [style.--slot-count]="timelineBounds().slotCount"
             [attr.aria-label]="'Timeline de agendamentos de ' + dayLabel()"
+            role="list"
           >
             @for (slot of timeSlots(); track slot.time) {
-              <li
+              <div
                 class="timeline__slot"
                 [class.timeline__slot--hour]="slot.isHour"
                 [style.grid-row]="slot.gridRow"
@@ -121,11 +122,11 @@
                     {{ slot.label }}
                   </time>
                 }
-              </li>
+              </div>
             }
 
             @if (showNowMarker()) {
-              <li
+              <div
                 class="timeline__now"
                 [style.--now-top]="nowLineTop()"
                 [attr.aria-label]="'Agora · ' + currentTimeLabel()"
@@ -133,15 +134,26 @@
               >
                 <span class="timeline__now-dot"></span>
                 <span class="timeline__now-label">Agora · {{ currentTimeLabel() }}</span>
-              </li>
+              </div>
             }
 
             @for (appointment of visibleAppointments(); track appointment.id) {
-              <li class="timeline__appointment" [style.grid-row]="appointment.gridRow">
-                <app-appointment-card [appointment]="appointment" />
-              </li>
+              <div
+                class="timeline__appointment"
+                [style.top.px]="appointment.layout.topPx"
+                [style.height.px]="appointment.layout.heightPx"
+                [style.--appointment-lane-index]="appointment.layout.laneIndex"
+                [style.--appointment-lane-count]="appointment.layout.laneCount"
+                role="listitem"
+              >
+                <app-appointment-card
+                  [appointment]="appointment"
+                  [showActionTrigger]="hasAppointmentActions(appointment)"
+                  (actionRequested)="openAppointmentActions(appointment)"
+                />
+              </div>
             }
-          </ol>
+          </div>
         }
       </div>
     </section>
@@ -199,14 +211,130 @@
     </button>
   }
 
+  @if (hasOpenSheet()) {
+    <div class="agenda-sheet-backdrop" (click)="closeActiveSheet()" aria-hidden="true"></div>
+  }
+
   @if (isCreateSheetOpen()) {
-    <div class="agenda-sheet-backdrop" (click)="closeCreateSheet()" aria-hidden="true"></div>
     <section class="agenda-sheet" aria-label="Criar novo agendamento">
       <app-appointment-form
         [mode]="'create'"
         [preferredDate]="selectedDate()"
         (saved)="handleAppointmentCreated($event)"
         (cancelled)="closeCreateSheet()"
+      />
+    </section>
+  }
+
+  @if (actionSheetAppointment() && !confirmAction()) {
+    <section class="agenda-sheet" aria-label="Ações do agendamento">
+      <div class="agenda-sheet-panel">
+        <div class="agenda-sheet-panel__header">
+          <div>
+            <p class="agenda-sheet-panel__eyebrow">Ações do agendamento</p>
+            <h3>{{ actionSheetAppointment()!.clientName }}</h3>
+            <p class="agenda-sheet-panel__meta">
+              {{ actionSheetAppointment()!.timeRangeLabel }} · {{ actionSheetAppointment()!.serviceName }}
+            </p>
+            <p class="agenda-sheet-panel__meta">{{ actionSheetAppointment()!.professionalName }}</p>
+          </div>
+
+          <button
+            type="button"
+            class="agenda-sheet-panel__close"
+            aria-label="Fechar ações"
+            (click)="closeActionSheet()"
+          >
+            Fechar
+          </button>
+        </div>
+
+        @if (actionError()) {
+          <div class="agenda-sheet-panel__feedback" role="alert">{{ actionError() }}</div>
+        }
+
+        <app-appointment-actions
+          [appt]="actionSheetAppointment()!.appointment"
+          [role]="currentRole()"
+          [disabled]="pendingAction() !== null"
+          [pendingAction]="pendingAction()"
+          (completed)="requestActionConfirmation('complete')"
+          (noShowed)="requestActionConfirmation('no-show')"
+          (cancelled)="requestActionConfirmation('cancel')"
+          (rescheduled)="startRescheduleFromActionSheet()"
+          (reviewResolved)="requestActionConfirmation('resolve-review')"
+        />
+      </div>
+    </section>
+  }
+
+  @if (actionConfirmation()) {
+    <section class="agenda-sheet" aria-label="Confirmar ação do agendamento">
+      <div class="agenda-sheet-panel">
+        <div class="agenda-sheet-panel__header">
+          <div>
+            <p class="agenda-sheet-panel__eyebrow">Confirmação</p>
+            <h3>{{ actionConfirmation()!.title }}</h3>
+            <p class="agenda-sheet-panel__meta">{{ actionConfirmation()!.description }}</p>
+          </div>
+
+          <button
+            type="button"
+            class="agenda-sheet-panel__close"
+            aria-label="Voltar para as ações"
+            (click)="cancelActionConfirmation()"
+          >
+            Voltar
+          </button>
+        </div>
+
+        @if (actionSheetAppointment()!.appointment.requiresReview) {
+          <div class="agenda-sheet-panel__review" role="status">
+            <strong>Revisão pendente</strong>
+            <span>{{ actionSheetAppointment()!.appointment.reviewReason || 'O sistema marcou este agendamento para revisão.' }}</span>
+          </div>
+        }
+
+        @if (actionError()) {
+          <div class="agenda-sheet-panel__feedback" role="alert">{{ actionError() }}</div>
+        }
+
+        <div class="agenda-sheet-panel__actions">
+          <button type="button" class="agenda-inline-button" (click)="cancelActionConfirmation()">
+            Voltar
+          </button>
+          <button
+            type="button"
+            class="agenda-inline-button"
+            [class.agenda-inline-button--success]="actionConfirmation()!.tone === 'success'"
+            [class.agenda-inline-button--warning]="actionConfirmation()!.tone === 'warning'"
+            [class.agenda-inline-button--danger]="actionConfirmation()!.tone === 'danger'"
+            [class.agenda-inline-button--primary]="actionConfirmation()!.tone === 'primary'"
+            [disabled]="pendingAction() !== null"
+            [attr.aria-busy]="pendingAction() !== null"
+            (click)="confirmAppointmentAction()"
+          >
+            {{ pendingAction() ? 'Salvando…' : actionConfirmation()!.confirmLabel }}
+          </button>
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (rescheduleSheetAppointment()) {
+    <section class="agenda-sheet" aria-label="Reagendar agendamento">
+      <app-appointment-form
+        [mode]="'reschedule'"
+        [appointmentId]="rescheduleSheetAppointment()!.id"
+        [currentProfessionalId]="rescheduleSheetAppointment()!.appointment.professionalId"
+        [currentProfessionalName]="rescheduleSheetAppointment()!.professionalName"
+        [currentClientName]="rescheduleSheetAppointment()!.clientName"
+        [currentServiceName]="rescheduleSheetAppointment()!.serviceName"
+        [currentTimeRangeLabel]="rescheduleSheetAppointment()!.timeRangeLabel"
+        [currentDurationMinutes]="rescheduleSheetAppointment()!.durationMinutes"
+        [preferredDate]="reschedulePreferredDate()"
+        (saved)="handleAppointmentRescheduled($event)"
+        (cancelled)="closeRescheduleSheet()"
       />
     </section>
   }

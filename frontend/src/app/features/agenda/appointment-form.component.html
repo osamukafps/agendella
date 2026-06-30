@@ -203,13 +203,46 @@
         </section>
       }
 
+      @if (mode === 'reschedule') {
+        <section class="selection-section selection-section--summary">
+          <div class="selection-section__header">
+            <div>
+              <h4>Agendamento atual</h4>
+              <p>Confira os dados atuais antes de escolher um novo horário real.</p>
+            </div>
+            @if (durationLabel()) {
+              <span class="selection-section__meta">{{ durationLabel() }}</span>
+            }
+          </div>
+
+          <div class="appointment-summary">
+            <article>
+              <span class="appointment-summary__label">Cliente</span>
+              <strong>{{ currentClientName || 'Cliente atual' }}</strong>
+            </article>
+            <article>
+              <span class="appointment-summary__label">Serviço</span>
+              <strong>{{ currentServiceName || 'Serviço atual' }}</strong>
+            </article>
+            <article>
+              <span class="appointment-summary__label">Profissional</span>
+              <strong>{{ currentProfessionalName || 'Profissional atual' }}</strong>
+            </article>
+            <article>
+              <span class="appointment-summary__label">Horário atual</span>
+              <strong>{{ currentTimeRangeLabel || 'Horário atual' }}</strong>
+            </article>
+          </div>
+        </section>
+      }
+
       <section class="selection-section">
         <div class="selection-section__header">
           <div>
             <h4>Data e horário</h4>
             <p>
-              @if (selectedProfessional()) {
-                {{ selectedProfessional()?.name }}
+              @if (activeProfessionalName()) {
+                {{ activeProfessionalName() }}
               } @else {
                 Selecione profissional e serviço para carregar horários reais.
               }

@@ -284,6 +284,8 @@
 .timeline {
   --time-column: 56px;
   --slot-height: 72px;
+  --timeline-appointment-gap: 8px;
+  --timeline-appointment-offset: 12px;
 
   position: relative;
   display: grid;
@@ -348,6 +350,7 @@
   z-index: 3;
   height: 0;
   border-top: 1px dashed var(--color-primary);
+  pointer-events: none;
 }
 
 .timeline__now-dot {
@@ -382,10 +385,25 @@
 }
 
 .timeline__appointment {
+  --appointment-lane-index: 0;
+  --appointment-lane-count: 1;
+  --appointment-lane-gap: var(--timeline-appointment-gap);
+  --appointment-lane-width: calc(
+    (100% - ((var(--appointment-lane-count) - 1) * var(--appointment-lane-gap)))
+    / var(--appointment-lane-count)
+  );
+
+  position: absolute;
   z-index: 2;
-  grid-column: 2;
+  top: 0;
+  left: calc(
+    var(--time-column)
+    + var(--timeline-appointment-offset)
+    + ((var(--appointment-lane-width) + var(--appointment-lane-gap)) * var(--appointment-lane-index))
+  );
+  width: var(--appointment-lane-width);
   min-width: 0;
-  padding: 0 0 var(--space-2) var(--space-3);
+  max-width: calc(100% - var(--time-column) - var(--timeline-appointment-offset));
 }
 
 .timeline__appointment app-appointment-card {
@@ -568,15 +586,13 @@
 
   .timeline {
     --time-column: 48px;
+    --timeline-appointment-gap: 6px;
+    --timeline-appointment-offset: 8px;
   }
 
   .timeline-wrapper {
     overflow: visible;
     padding-bottom: calc(112px + env(safe-area-inset-bottom));
-  }
-
-  .timeline__appointment {
-    padding-left: var(--space-2);
   }
 }
 

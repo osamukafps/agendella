@@ -27,6 +27,7 @@ function buildVm(appt: AppointmentResponse, overrides: Partial<AgendaAppointment
     clientName: 'Maria',
     serviceName: 'Corte',
     professionalName: 'Ana Costa',
+    durationMinutes: 60,
     startAtUtc: appt.startAtUtc,
     endAtUtc: appt.endAtUtc,
     startTimeLabel: '10:00',
@@ -35,6 +36,13 @@ function buildVm(appt: AppointmentResponse, overrides: Partial<AgendaAppointment
     durationLabel: '1h',
     statusLabel: getStatusLabel(appt.status),
     gridRow: '1 / span 2',
+    layout: {
+      topPx: 0,
+      heightPx: 136,
+      laneIndex: 0,
+      laneCount: 1,
+      clusterId: 'cluster-1',
+    },
     ...overrides,
   };
 }
@@ -135,5 +143,50 @@ describe('AppointmentCardComponent — conteúdo do card', () => {
     const fixture = setupComponent({ ...BASE_APPT, requiresReview: true });
     const badge = fixture.debugElement.query(By.css('.appt-badge'));
     expect(badge.classes['badge-review']).toBe(true);
+  });
+
+  it('emite actionRequested quando o card é interativo', () => {
+    TestBed.configureTestingModule({ imports: [AppointmentCardComponent] });
+    const fixture = TestBed.createComponent(AppointmentCardComponent);
+    const emitted: string[] = [];
+
+    fixture.componentInstance.appointment = buildVm(BASE_APPT);
+    fixture.componentInstance.showActionTrigger = true;
+    fixture.componentInstance.actionRequested.subscribe(() => emitted.push('ok'));
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.css('.appt-card__overlay')).nativeElement.click();
+    expect(emitted).toEqual(['ok']);
+  });
+
+  it('aplica versão compacta quando o card está em cluster sobreposto', () => {
+    const fixture = setupComponent(BASE_APPT, {
+      layout: {
+        topPx: 0,
+        heightPx: 136,
+        laneIndex: 1,
+        laneCount: 2,
+        clusterId: 'cluster-2',
+      },
+    });
+
+    const article = fixture.debugElement.query(By.css('article.appt-card'));
+    expect(article.classes['appt-card--compact']).toBe(true);
+    expect(article.classes['appt-card--compressed']).toBeFalsy();
+  });
+
+  it('aplica versão comprimida quando há 3 ou mais lanes', () => {
+    const fixture = setupComponent(BASE_APPT, {
+      layout: {
+        topPx: 0,
+        heightPx: 136,
+        laneIndex: 2,
+        laneCount: 3,
+        clusterId: 'cluster-3',
+      },
+    });
+
+    const article = fixture.debugElement.query(By.css('article.appt-card'));
+    expect(article.classes['appt-card--compressed']).toBe(true);
   });
 });

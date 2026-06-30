@@ -7,10 +7,14 @@ import type {
   ProfessionalResponse,
   ServiceResponse,
 } from '../../core/api/api.models';
+import type { CollaboratorRole } from '../../core/auth/auth.models';
 
 export const DEFAULT_TIMELINE_START_MINUTES = 8 * 60;
 export const DEFAULT_TIMELINE_END_MINUTES = 18 * 60;
 export const SLOT_MINUTES = 30;
+export const TIMELINE_SLOT_HEIGHT_PX = 72;
+export const TIMELINE_APPOINTMENT_VERTICAL_GAP_PX = 8;
+export const MIN_TIMELINE_APPOINTMENT_HEIGHT_PX = 76;
 
 const ABBRS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const API_DAY_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
@@ -125,10 +129,22 @@ export function canComplete(status: AppointmentStatus): boolean { return status 
 export function canNoShow(status: AppointmentStatus): boolean { return status === 'Scheduled'; }
 export function canCancel(status: AppointmentStatus): boolean { return status === 'Scheduled'; }
 export function canReschedule(status: AppointmentStatus): boolean { return status === 'Scheduled'; }
-export function canResolveReview(requiresReview: boolean): boolean { return requiresReview; }
+export function canResolveReview(
+  requiresReview: boolean,
+  role?: CollaboratorRole | null,
+): boolean {
+  return requiresReview && role === 'administradora';
+}
 
-export function hasAnyAction(appt: AppointmentResponse): boolean {
-  return canComplete(appt.status) || canResolveReview(appt.requiresReview);
+export function hasAnyAction(
+  appt: AppointmentResponse,
+  role?: CollaboratorRole | null,
+): boolean {
+  return canComplete(appt.status)
+    || canNoShow(appt.status)
+    || canCancel(appt.status)
+    || canReschedule(appt.status)
+    || canResolveReview(appt.requiresReview, role);
 }
 
 // ─── Tipos de conflito ────────────────────────────────────────────────────────
@@ -182,10 +198,17 @@ export function isSameLocalDay(utcStr: string, dateStr: string): boolean {
 // ─── Duração legível ──────────────────────────────────────────────────────────
 
 export function formatDuration(startUtc: string, endUtc: string): string {
-  const mins = Math.round((new Date(endUtc).getTime() - new Date(startUtc).getTime()) / 60000);
-  return mins >= 60
-    ? `${Math.floor(mins / 60)}h${mins % 60 ? String(mins % 60).padStart(2, '0') : ''}`
-    : `${mins} min`;
+  return formatDurationMinutes(getDurationMinutes(startUtc, endUtc));
+}
+
+export function getDurationMinutes(startUtc: string, endUtc: string): number {
+  return Math.round((new Date(endUtc).getTime() - new Date(startUtc).getTime()) / 60000);
+}
+
+export function formatDurationMinutes(minutes: number): string {
+  return minutes >= 60
+    ? `${Math.floor(minutes / 60)}h${minutes % 60 ? String(minutes % 60).padStart(2, '0') : ''}`
+    : `${minutes} min`;
 }
 
 // ─── Timeline ─────────────────────────────────────────────────────────────────
@@ -291,7 +314,7 @@ export function buildTimelineSlots(bounds: TimelineBounds): TimelineSlot[] {
 
 export function getNowMarkerTop(bounds: TimelineBounds, now: Date = new Date()): string {
   const offsetMinutes = minutesFromDate(now) - bounds.startMinutes;
-  return `${(offsetMinutes / SLOT_MINUTES) * 72}px`;
+  return `${(offsetMinutes / SLOT_MINUTES) * TIMELINE_SLOT_HEIGHT_PX}px`;
 }
 
 function toGridRow(startUtc: string, endUtc: string, timelineStartMinutes: number): string {
@@ -316,6 +339,7 @@ export interface AgendaAppointmentViewModel {
   clientName: string;
   serviceName: string;
   professionalName: string;
+  durationMinutes: number;
   startAtUtc: string;
   endAtUtc: string;
   startTimeLabel: string;
@@ -324,6 +348,13 @@ export interface AgendaAppointmentViewModel {
   durationLabel: string;
   statusLabel: string;
   gridRow: string;
+  layout: {
+    topPx: number;
+    heightPx: number;
+    laneIndex: number;
+    laneCount: number;
+    clusterId: string;
+  };
 }
 
 export interface AgendaSummary {
@@ -357,16 +388,138 @@ function getProfessionalName(lookup: AgendaLookupMaps, professionalId: string): 
   return lookup.professionalsById.get(professionalId) ?? 'Profissional não encontrada';
 }
 
+interface AgendaAppointmentLayoutSeed {
+  id: string;
+  startAtUtc: string;
+  endAtUtc: string;
+}
+
+interface AgendaAppointmentLayout {
+  topPx: number;
+  heightPx: number;
+  laneIndex: number;
+  laneCount: number;
+  clusterId: string;
+}
+
+function getLocalMinutesBounds(startAtUtc: string, endAtUtc: string): { startMinutes: number; endMinutes: number } {
+  return {
+    startMinutes: minutesFromUtcString(startAtUtc),
+    endMinutes: minutesFromUtcString(endAtUtc),
+  };
+}
+
+export function buildAppointmentLayout(
+  appointments: AgendaAppointmentLayoutSeed[],
+  timelineStartMinutes: number,
+): ReadonlyMap<string, AgendaAppointmentLayout> {
+  const sortedAppointments = [...appointments]
+    .map(appointment => ({
+      appointment,
+      ...getLocalMinutesBounds(appointment.startAtUtc, appointment.endAtUtc),
+    }))
+    .sort((left, right) => (
+      left.startMinutes - right.startMinutes
+      || left.endMinutes - right.endMinutes
+      || left.appointment.id.localeCompare(right.appointment.id)
+    ));
+
+  const layoutById = new Map<string, AgendaAppointmentLayout>();
+  const clusterAssignments: Array<{
+    id: string;
+    startMinutes: number;
+    endMinutes: number;
+    laneIndex: number;
+  }> = [];
+
+  let currentClusterId = 0;
+  let currentClusterEnd = Number.NEGATIVE_INFINITY;
+  let currentClusterItems: typeof sortedAppointments = [];
+
+  const flushCluster = (): void => {
+    if (currentClusterItems.length === 0) {
+      return;
+    }
+
+    const laneEnds: number[] = [];
+
+    currentClusterItems.forEach(item => {
+      let laneIndex = laneEnds.findIndex(endMinutes => endMinutes <= item.startMinutes);
+      if (laneIndex === -1) {
+        laneIndex = laneEnds.length;
+        laneEnds.push(item.endMinutes);
+      } else {
+        laneEnds[laneIndex] = item.endMinutes;
+      }
+
+      clusterAssignments.push({
+        id: item.appointment.id,
+        startMinutes: item.startMinutes,
+        endMinutes: item.endMinutes,
+        laneIndex,
+      });
+    });
+
+    const laneCount = laneEnds.length;
+    const clusterId = `cluster-${currentClusterId}`;
+
+    clusterAssignments.splice(0).forEach(assignment => {
+      const rawHeightPx = ((assignment.endMinutes - assignment.startMinutes) / SLOT_MINUTES) * TIMELINE_SLOT_HEIGHT_PX;
+
+      layoutById.set(assignment.id, {
+        topPx: ((assignment.startMinutes - timelineStartMinutes) / SLOT_MINUTES) * TIMELINE_SLOT_HEIGHT_PX,
+        heightPx: Math.max(
+          MIN_TIMELINE_APPOINTMENT_HEIGHT_PX,
+          rawHeightPx - TIMELINE_APPOINTMENT_VERTICAL_GAP_PX,
+        ),
+        laneIndex: assignment.laneIndex,
+        laneCount,
+        clusterId,
+      });
+    });
+
+    currentClusterItems = [];
+  };
+
+  sortedAppointments.forEach(item => {
+    if (currentClusterItems.length === 0) {
+      currentClusterId += 1;
+      currentClusterEnd = item.endMinutes;
+      currentClusterItems = [item];
+      return;
+    }
+
+    if (item.startMinutes < currentClusterEnd) {
+      currentClusterItems.push(item);
+      currentClusterEnd = Math.max(currentClusterEnd, item.endMinutes);
+      return;
+    }
+
+    flushCluster();
+    currentClusterId += 1;
+    currentClusterEnd = item.endMinutes;
+    currentClusterItems = [item];
+  });
+
+  flushCluster();
+
+  return layoutById;
+}
+
 export function buildAgendaAppointments(
   appointments: AppointmentResponse[],
   lookups: AgendaLookupMaps,
   timelineStartMinutes: number,
 ): AgendaAppointmentViewModel[] {
-  return [...appointments]
-    .sort((left, right) => new Date(left.startAtUtc).getTime() - new Date(right.startAtUtc).getTime())
+  const sortedAppointments = [...appointments]
+    .sort((left, right) => new Date(left.startAtUtc).getTime() - new Date(right.startAtUtc).getTime());
+  const layoutById = buildAppointmentLayout(sortedAppointments, timelineStartMinutes);
+
+  return sortedAppointments
     .map(appointment => {
       const startTimeLabel = formatLocalTime(appointment.startAtUtc);
       const endTimeLabel = formatLocalTime(appointment.endAtUtc);
+      const durationMinutes = getDurationMinutes(appointment.startAtUtc, appointment.endAtUtc);
 
       return {
         id: appointment.id,
@@ -374,14 +527,16 @@ export function buildAgendaAppointments(
         clientName: getClientName(lookups, appointment.clientId),
         serviceName: getServiceName(lookups, appointment.serviceId),
         professionalName: getProfessionalName(lookups, appointment.professionalId),
+        durationMinutes,
         startAtUtc: appointment.startAtUtc,
         endAtUtc: appointment.endAtUtc,
         startTimeLabel,
         endTimeLabel,
         timeRangeLabel: `${startTimeLabel} - ${endTimeLabel}`,
-        durationLabel: formatDuration(appointment.startAtUtc, appointment.endAtUtc),
+        durationLabel: formatDurationMinutes(durationMinutes),
         statusLabel: getStatusLabel(appointment.status),
         gridRow: toGridRow(appointment.startAtUtc, appointment.endAtUtc, timelineStartMinutes),
+        layout: layoutById.get(appointment.id)!,
       };
     });
 }

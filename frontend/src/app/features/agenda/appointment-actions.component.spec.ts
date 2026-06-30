@@ -59,27 +59,40 @@ describe('canReschedule()', () => {
 // ─── canResolveReview ─────────────────────────────────────────────────────────
 
 describe('canResolveReview()', () => {
-  it('retorna true quando requiresReview é true', () => { expect(canResolveReview(true)).toBe(true); });
-  it('retorna false quando requiresReview é false', () => { expect(canResolveReview(false)).toBe(false); });
+  it('retorna true quando requiresReview é true para administradora', () => {
+    expect(canResolveReview(true, 'administradora')).toBe(true);
+  });
+
+  it('retorna false quando requiresReview é true para profissional', () => {
+    expect(canResolveReview(true, 'profissional')).toBe(false);
+  });
+
+  it('retorna false quando requiresReview é false', () => {
+    expect(canResolveReview(false, 'administradora')).toBe(false);
+  });
 });
 
 // ─── hasAnyAction ─────────────────────────────────────────────────────────────
 
 describe('hasAnyAction()', () => {
   it('retorna true para Scheduled', () => {
-    expect(hasAnyAction(makeAppt('Scheduled'))).toBe(true);
+    expect(hasAnyAction(makeAppt('Scheduled'), 'profissional')).toBe(true);
   });
 
-  it('retorna true para agendamento com revisão pendente', () => {
-    expect(hasAnyAction(makeAppt('Completed', true))).toBe(true);
+  it('retorna true para agendamento com revisão pendente de administradora', () => {
+    expect(hasAnyAction(makeAppt('Completed', true), 'administradora')).toBe(true);
+  });
+
+  it('retorna false para revisão pendente de profissional sem outras ações', () => {
+    expect(hasAnyAction(makeAppt('Completed', true), 'profissional')).toBe(false);
   });
 
   it('retorna false para Completed sem revisão', () => {
-    expect(hasAnyAction(makeAppt('Completed', false))).toBe(false);
+    expect(hasAnyAction(makeAppt('Completed', false), 'administradora')).toBe(false);
   });
 
   it('retorna false para Cancelled sem revisão', () => {
-    expect(hasAnyAction(makeAppt('Cancelled', false))).toBe(false);
+    expect(hasAnyAction(makeAppt('Cancelled', false), 'administradora')).toBe(false);
   });
 });
 
