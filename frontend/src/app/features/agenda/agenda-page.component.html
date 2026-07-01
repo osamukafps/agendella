@@ -83,25 +83,28 @@
             >
               <span class="agenda-item__accent" aria-hidden="true"></span>
 
-              <div class="agenda-item__time">
-                <span>{{ appointment.startTimeLabel }}</span>
-              </div>
+              <div class="agenda-item__body">
+                <div class="agenda-item__time">
+                  <span class="agenda-item__time-icon" aria-hidden="true"></span>
+                  <span class="agenda-item__time-label">{{ appointment.startTimeLabel }}</span>
+                </div>
 
-              <div class="agenda-item__avatar">
-                {{ getClientInitials(appointment.clientName) }}
-              </div>
+                <div class="agenda-item__avatar">
+                  {{ getClientInitials(appointment.clientName) }}
+                </div>
 
-              <div class="agenda-item__content">
-                <strong>{{ appointment.clientName }}</strong>
-                <p>{{ appointment.serviceName }} · {{ appointment.professionalName }}</p>
-                @if (appointment.appointment.requiresReview) {
-                  <span class="agenda-item__review">
-                    Requer revisão
-                    @if (appointment.appointment.reviewReason) {
-                      · {{ appointment.appointment.reviewReason }}
-                    }
-                  </span>
-                }
+                <div class="agenda-item__content">
+                  <strong>{{ appointment.clientName }}</strong>
+                  <p>{{ appointment.serviceName }} · {{ appointment.professionalName }}</p>
+                  @if (appointment.appointment.requiresReview) {
+                    <span class="agenda-item__review">
+                      Requer revisão
+                      @if (appointment.appointment.reviewReason) {
+                        · {{ appointment.appointment.reviewReason }}
+                      }
+                    </span>
+                  }
+                </div>
               </div>
 
               <div class="agenda-item__side">
@@ -142,25 +145,28 @@
                   >
                     <span class="agenda-item__accent" aria-hidden="true"></span>
 
-                    <div class="agenda-item__time">
-                      <span>{{ appointment.startTimeLabel }}</span>
-                    </div>
+                    <div class="agenda-item__body">
+                      <div class="agenda-item__time">
+                        <span class="agenda-item__time-icon" aria-hidden="true"></span>
+                        <span class="agenda-item__time-label">{{ appointment.startTimeLabel }}</span>
+                      </div>
 
-                    <div class="agenda-item__avatar">
-                      {{ getClientInitials(appointment.clientName) }}
-                    </div>
+                      <div class="agenda-item__avatar">
+                        {{ getClientInitials(appointment.clientName) }}
+                      </div>
 
-                    <div class="agenda-item__content">
-                      <strong>{{ appointment.clientName }}</strong>
-                      <p>{{ appointment.serviceName }} · {{ appointment.professionalName }}</p>
-                      @if (appointment.appointment.requiresReview) {
-                        <span class="agenda-item__review">
-                          Requer revisão
-                          @if (appointment.appointment.reviewReason) {
-                            · {{ appointment.appointment.reviewReason }}
-                          }
-                        </span>
-                      }
+                      <div class="agenda-item__content">
+                        <strong>{{ appointment.clientName }}</strong>
+                        <p>{{ appointment.serviceName }} · {{ appointment.professionalName }}</p>
+                        @if (appointment.appointment.requiresReview) {
+                          <span class="agenda-item__review">
+                            Requer revisão
+                            @if (appointment.appointment.reviewReason) {
+                              · {{ appointment.appointment.reviewReason }}
+                            }
+                          </span>
+                        }
+                      </div>
                     </div>
 
                     <div class="agenda-item__side">
