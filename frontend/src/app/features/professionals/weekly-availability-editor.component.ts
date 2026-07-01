@@ -2,6 +2,7 @@ import { Component, Input, OnInit, computed, inject, signal } from '@angular/cor
 import { ProfessionalsApiService } from './professionals-api.service';
 import { mapApiErrorToUi } from '../../core/api/api-error.utils';
 import type { WeeklyAvailabilityEntryDto } from '../../core/api/api.models';
+import { TimePickerComponent } from '../../shared/time-picker.component';
 
 export interface DaySlot {
   dayOfWeek: string;
@@ -52,6 +53,7 @@ export function isValidTimeRange(start: string, end: string): boolean {
 @Component({
   selector: 'app-weekly-availability-editor',
   standalone: true,
+  imports: [TimePickerComponent],
   templateUrl: './weekly-availability-editor.component.html',
   styleUrl: './weekly-availability-editor.component.css',
 })

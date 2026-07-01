@@ -7,6 +7,10 @@ import {
 } from '../../core/api/cursor-pagination';
 import type { SalonBlockResponse, CreateSalonBlockRequest } from '../../core/api/api.models';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+import { ModalSheetComponent } from '../../shared/modal-sheet.component';
+import { DatePickerComponent } from '../../shared/date-picker.component';
+import { TimePickerComponent } from '../../shared/time-picker.component';
+import { localDateTimeToUtc } from '../../core/utils/date-time';
 
 const EMPTY_FORM: CreateSalonBlockRequest = {
   startAtUtc: '', endAtUtc: '', reason: '',
@@ -15,6 +19,7 @@ const EMPTY_FORM: CreateSalonBlockRequest = {
 @Component({
   selector: 'app-salon-blocks-page',
   standalone: true,
+  imports: [ModalSheetComponent, DatePickerComponent, TimePickerComponent],
   templateUrl: './salon-blocks-page.component.html',
   styleUrl: './salon-blocks-page.component.css',
 })
@@ -34,6 +39,10 @@ export class SalonBlocksPageComponent implements OnInit {
   readonly formError  = signal<string | null>(null);
   readonly showForm   = signal(false);
   readonly form       = signal<CreateSalonBlockRequest>({ ...EMPTY_FORM });
+  readonly formStartDate = signal('');
+  readonly formStartTime = signal('');
+  readonly formEndDate = signal('');
+  readonly formEndTime = signal('');
   readonly fieldErrors = signal<Record<string, string[]>>({});
 
   async ngOnInit(): Promise<void> { await this.load(); }
@@ -53,6 +62,10 @@ export class SalonBlocksPageComponent implements OnInit {
 
   openCreate(): void {
     this.form.set({ ...EMPTY_FORM });
+    this.formStartDate.set('');
+    this.formStartTime.set('');
+    this.formEndDate.set('');
+    this.formEndTime.set('');
     this.showForm.set(true);
     this.formError.set(null);
     this.fieldErrors.set({});
@@ -75,11 +88,34 @@ export class SalonBlocksPageComponent implements OnInit {
 
   async save(event: Event): Promise<void> {
     event.preventDefault();
-    this.isSaving.set(true);
     this.formError.set(null);
     this.fieldErrors.set({});
+
+    const startAtUtc = localDateTimeToUtc(this.formStartDate(), this.formStartTime());
+    const endAtUtc = localDateTimeToUtc(this.formEndDate(), this.formEndTime());
+
+    if (!startAtUtc || !endAtUtc) {
+      this.fieldErrors.set({
+        ...(startAtUtc ? {} : { startAtUtc: ['Selecione data e hora válidas para o início.'] }),
+        ...(endAtUtc ? {} : { endAtUtc: ['Selecione data e hora válidas para o fim.'] }),
+      });
+      return;
+    }
+
+    if (new Date(endAtUtc) <= new Date(startAtUtc)) {
+      this.fieldErrors.set({
+        endAtUtc: ['O fim precisa acontecer depois do início.'],
+      });
+      return;
+    }
+
+    this.isSaving.set(true);
     try {
-      const created = await this.api.create(this.form());
+      const created = await this.api.create({
+        ...this.form(),
+        startAtUtc,
+        endAtUtc,
+      });
       this.items.update(items => [created, ...items]);
       this.closeForm();
     } catch (error) {
@@ -117,23 +153,19 @@ export class SalonBlocksPageComponent implements OnInit {
     }).format(new Date(utc));
   }
 
-  toLocalInputValue(utc: string): string {
-    if (!utc) return '';
-    const d = new Date(utc);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  toUtcFromInput(localValue: string): string {
-    if (!localValue) return '';
-    return new Date(localValue).toISOString();
-  }
-
   async loadMore(): Promise<void> {
     await this.load(false);
   }
 
   fieldError(field: keyof CreateSalonBlockRequest): string | null {
     return this.fieldErrors()[field]?.[0] ?? null;
+  }
+
+  clearFieldError(field: keyof CreateSalonBlockRequest): void {
+    this.fieldErrors.update(errors => {
+      const next = { ...errors };
+      delete next[field];
+      return next;
+    });
   }
 }

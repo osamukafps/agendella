@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { SalonSettingsApiService } from './salon-settings-api.service';
 import { mapApiErrorToUi } from '../../core/api/api-error.utils';
 import type { SalonSettingsResponse, BusinessHourDto } from '../../core/api/api.models';
+import { TimePickerComponent } from '../../shared/time-picker.component';
 
 export const DAYS_PT: Record<string, string> = {
   Monday: 'Segunda', Tuesday: 'Terça', Wednesday: 'Quarta',
@@ -36,6 +37,7 @@ export function sortBusinessHours(hours: BusinessHourDto[]): BusinessHourDto[] {
 @Component({
   selector: 'app-salon-settings-page',
   standalone: true,
+  imports: [TimePickerComponent],
   templateUrl: './salon-settings-page.component.html',
   styleUrl: './salon-settings-page.component.css',
 })

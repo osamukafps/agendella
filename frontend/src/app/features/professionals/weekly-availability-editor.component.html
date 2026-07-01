@@ -32,21 +32,21 @@
 
           @if (row.enabled) {
             <div class="time-range" [class.time-range--error]="hasError(i)">
-              <input
-                type="time"
+              <app-time-picker
                 class="time-input"
+                [compact]="true"
                 [value]="row.start"
-                (change)="updateTime(i, 'start', $any($event.target).value)"
-                [attr.aria-label]="row.dayLabel + ' início'"
-              >
+                (valueChange)="updateTime(i, 'start', $event)"
+                [ariaLabel]="row.dayLabel + ' início'"
+              />
               <span class="time-separator">–</span>
-              <input
-                type="time"
+              <app-time-picker
                 class="time-input"
+                [compact]="true"
                 [value]="row.end"
-                (change)="updateTime(i, 'end', $any($event.target).value)"
-                [attr.aria-label]="row.dayLabel + ' fim'"
-              >
+                (valueChange)="updateTime(i, 'end', $event)"
+                [ariaLabel]="row.dayLabel + ' fim'"
+              />
               @if (hasError(i)) {
                 <span class="time-error-msg">Fim deve ser após o início</span>
               }

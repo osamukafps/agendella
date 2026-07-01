@@ -52,55 +52,122 @@
   }
 
   @if (showForm()) {
-    <div class="form-card">
-      <h3 class="form-title">{{ isAdmin() ? 'Nova ausência administrativa' : 'Nova ausência' }}</h3>
-      <form (submit)="save($event)" novalidate>
+    <app-modal-sheet
+      [title]="isAdmin() ? 'Nova ausência administrativa' : 'Nova ausência'"
+      description="Registre indisponibilidade sem sair da listagem e sem alterar permissões do fluxo atual."
+      [disableClose]="isSaving()"
+      (closed)="closeForm()"
+    >
+      <form sheet-body id="absence-sheet-form" class="sheet-form" (submit)="save($event)" novalidate>
         @if (formError()) {
           <div class="state-error" role="alert">{{ formError() }}</div>
         }
 
-        @if (isAdmin() && activeProfessional()) {
-          <p class="section-helper">Você está criando a ausência para {{ activeProfessional()!.name }}.</p>
-        }
+        <section class="sheet-section sheet-section--highlight">
+          <div class="sheet-section__header">
+            <h4>Profissional e período</h4>
+            <p>Defina para quem a ausência vale e qual é o intervalo exato.</p>
+          </div>
 
-        <div class="field">
-          <label class="field-label" for="abs-start">Início</label>
-          <input id="abs-start" class="field-input" type="datetime-local" required
-            [value]="formStartLocal()"
-            (change)="formStartLocal.set($any($event.target).value)"
-            [attr.aria-invalid]="fieldError('startAtUtc') ? 'true' : null">
+          @if (isAdmin()) {
+            <div class="field">
+              <label class="field-label" for="absence-form-professional">Profissional</label>
+              <select
+                id="absence-form-professional"
+                class="field-input"
+                [value]="selectedProfessionalId()"
+                (change)="selectProfessional($any($event.target).value); clearFieldError('professionalId')"
+                [attr.aria-invalid]="fieldError('professionalId') ? 'true' : null"
+              >
+                @for (professional of professionals(); track professional.id) {
+                  <option [value]="professional.id">{{ professional.name }}</option>
+                }
+              </select>
+              @if (fieldError('professionalId')) {
+                <span class="field-error" role="alert">{{ fieldError('professionalId') }}</span>
+              }
+            </div>
+          } @else if (activeProfessionalId()) {
+            <p class="section-helper">A ausência será registrada no seu próprio calendário profissional.</p>
+          }
+
+          <div class="fields-row">
+            <div class="field">
+              <label class="field-label" for="abs-start-date">Data inicial</label>
+              <app-date-picker
+                ariaLabel="Selecionar data inicial da ausência"
+                [value]="formStartDate()"
+                [invalid]="!!fieldError('startAtUtc')"
+                (valueChange)="formStartDate.set($event); clearFieldError('startAtUtc')"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="abs-start-time">Hora inicial</label>
+              <app-time-picker
+                ariaLabel="Selecionar hora inicial da ausência"
+                [value]="formStartTime()"
+                [invalid]="!!fieldError('startAtUtc')"
+                (valueChange)="formStartTime.set($event); clearFieldError('startAtUtc')"
+              />
+            </div>
+          </div>
           @if (fieldError('startAtUtc')) {
             <span class="field-error" role="alert">{{ fieldError('startAtUtc') }}</span>
           }
-        </div>
-        <div class="field">
-          <label class="field-label" for="abs-end">Fim</label>
-          <input id="abs-end" class="field-input" type="datetime-local" required
-            [value]="formEndLocal()"
-            (change)="formEndLocal.set($any($event.target).value)"
-            [attr.aria-invalid]="fieldError('endAtUtc') ? 'true' : null">
+
+          <div class="fields-row">
+            <div class="field">
+              <label class="field-label" for="abs-end-date">Data final</label>
+              <app-date-picker
+                ariaLabel="Selecionar data final da ausência"
+                [value]="formEndDate()"
+                [invalid]="!!fieldError('endAtUtc')"
+                (valueChange)="formEndDate.set($event); clearFieldError('endAtUtc')"
+              />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="abs-end-time">Hora final</label>
+              <app-time-picker
+                ariaLabel="Selecionar hora final da ausência"
+                [value]="formEndTime()"
+                [invalid]="!!fieldError('endAtUtc')"
+                (valueChange)="formEndTime.set($event); clearFieldError('endAtUtc')"
+              />
+            </div>
+          </div>
           @if (fieldError('endAtUtc')) {
             <span class="field-error" role="alert">{{ fieldError('endAtUtc') }}</span>
           }
-        </div>
-        <div class="field">
-          <label class="field-label" for="abs-reason">Motivo</label>
-          <input id="abs-reason" class="field-input" type="text" required maxlength="200"
-            [value]="formReason()"
-            (input)="formReason.set($any($event.target).value)"
-            [attr.aria-invalid]="fieldError('reason') ? 'true' : null">
-          @if (fieldError('reason')) {
-            <span class="field-error" role="alert">{{ fieldError('reason') }}</span>
-          }
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn-ghost" (click)="closeForm()">Cancelar</button>
-          <button type="submit" class="btn-primary" [disabled]="isSaving()">
-            {{ isSaving() ? 'Salvando…' : 'Criar ausência' }}
-          </button>
-        </div>
+        </section>
+
+        <section class="sheet-section">
+          <div class="sheet-section__header">
+            <h4>Motivo</h4>
+            <p>Explique rapidamente o contexto da ausência para facilitar a leitura da lista.</p>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="abs-reason">Motivo</label>
+            <input id="abs-reason" class="field-input" type="text" required maxlength="200"
+              [value]="formReason()"
+              (input)="formReason.set($any($event.target).value); clearFieldError('reason')"
+              [attr.aria-invalid]="fieldError('reason') ? 'true' : null">
+            @if (fieldError('reason')) {
+              <span class="field-error" role="alert">{{ fieldError('reason') }}</span>
+            }
+          </div>
+        </section>
       </form>
-    </div>
+
+      <div sheet-footer class="form-actions">
+        <button type="button" class="btn-ghost" (click)="closeForm()" [disabled]="isSaving()">Cancelar</button>
+        <button type="submit" class="btn-primary" form="absence-sheet-form" [disabled]="isSaving()">
+          {{ isSaving() ? 'Salvando…' : 'Criar ausência' }}
+        </button>
+      </div>
+    </app-modal-sheet>
   }
 
   @if (isLoading() && !items().length) {

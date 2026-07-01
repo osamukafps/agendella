@@ -1,0 +1,101 @@
+<div class="date-picker">
+  <button
+    #triggerButton
+    type="button"
+    class="picker-trigger"
+    [class.picker-trigger--placeholder]="!currentValue()"
+    [class.picker-trigger--invalid]="invalid"
+    [disabled]="disabled"
+    [attr.aria-label]="ariaLabel"
+    [attr.aria-expanded]="isOpen()"
+    (click)="toggleOpen()"
+  >
+    <span>{{ displayValue() }}</span>
+    <span class="picker-trigger__icon" aria-hidden="true">▾</span>
+  </button>
+
+  @if (isOpen() && !isMobile()) {
+    <div
+      class="picker-panel"
+      [ngStyle]="desktopPanelStyles()"
+      role="dialog"
+      aria-modal="false"
+      aria-label="Selecionar data"
+    >
+      <div class="picker-calendar">
+        <div class="picker-calendar__header">
+          <button type="button" class="picker-nav" (click)="previousMonth()" aria-label="Mês anterior">‹</button>
+          <strong>{{ monthLabel() }}</strong>
+          <button type="button" class="picker-nav" (click)="nextMonth()" aria-label="Próximo mês">›</button>
+        </div>
+
+        <div class="picker-calendar__weekdays">
+          @for (day of weekDays; track day) {
+            <span>{{ day }}</span>
+          }
+        </div>
+
+        <div class="picker-calendar__grid">
+          @for (cell of calendarCells(); track cell.isoDate) {
+            <button
+              type="button"
+              class="picker-day"
+              [class.picker-day--outside]="!cell.inCurrentMonth"
+              [class.picker-day--today]="cell.isToday"
+              [class.picker-day--selected]="cell.isSelected"
+              (click)="selectDate(cell.isoDate)"
+            >
+              {{ cell.dayNumber }}
+            </button>
+          }
+        </div>
+
+        <div class="picker-calendar__footer">
+          <button type="button" class="picker-action" (click)="selectToday()">Hoje</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (isOpen() && isMobile()) {
+    <app-modal-sheet
+      title="Selecionar data"
+      description="Escolha uma data sem sair do formulário."
+      (closed)="close()"
+    >
+      <div sheet-body class="picker-calendar">
+        <div class="picker-calendar__header">
+          <button type="button" class="picker-nav" (click)="previousMonth()" aria-label="Mês anterior">‹</button>
+          <strong>{{ monthLabel() }}</strong>
+          <button type="button" class="picker-nav" (click)="nextMonth()" aria-label="Próximo mês">›</button>
+        </div>
+
+        <div class="picker-calendar__weekdays">
+          @for (day of weekDays; track day) {
+            <span>{{ day }}</span>
+          }
+        </div>
+
+        <div class="picker-calendar__grid">
+          @for (cell of calendarCells(); track cell.isoDate) {
+            <button
+              type="button"
+              class="picker-day"
+              [class.picker-day--outside]="!cell.inCurrentMonth"
+              [class.picker-day--today]="cell.isToday"
+              [class.picker-day--selected]="cell.isSelected"
+              (click)="selectDate(cell.isoDate)"
+            >
+              {{ cell.dayNumber }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div sheet-footer class="picker-calendar__footer">
+        <button type="button" class="picker-footer-btn picker-footer-btn--ghost" (click)="close()">Fechar</button>
+        <button type="button" class="picker-footer-btn picker-footer-btn--primary" (click)="selectToday()">Hoje</button>
+      </div>
+    </app-modal-sheet>
+  }
+</div>

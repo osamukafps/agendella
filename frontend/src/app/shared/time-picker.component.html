@@ -1,0 +1,127 @@
+<div class="time-picker">
+  <button
+    #triggerButton
+    type="button"
+    class="picker-trigger"
+    [class.picker-trigger--compact]="compact"
+    [class.picker-trigger--placeholder]="!currentValue()"
+    [class.picker-trigger--invalid]="invalid"
+    [disabled]="disabled"
+    [attr.aria-label]="ariaLabel"
+    [attr.aria-expanded]="isOpen()"
+    (click)="toggleOpen()"
+  >
+    <span>{{ displayValue() }}</span>
+    <span class="picker-trigger__icon" aria-hidden="true">▾</span>
+  </button>
+
+  @if (isOpen() && !isMobile()) {
+    <div
+      class="picker-panel"
+      [ngStyle]="desktopPanelStyles()"
+      role="dialog"
+      aria-modal="false"
+      aria-label="Selecionar horário"
+    >
+      <div class="time-content">
+        <div class="time-content__header">
+          <strong>{{ draftValue() }}</strong>
+          <span>Escolha hora e minuto</span>
+        </div>
+
+        <div class="time-columns">
+          <section class="time-column">
+            <h4>Hora</h4>
+            <div class="time-list">
+              @for (hour of hours; track hour) {
+                <button
+                  type="button"
+                  class="time-option"
+                  [class.time-option--selected]="draftHour() === hour"
+                  (click)="selectHour(hour)"
+                >
+                  {{ hour }}
+                </button>
+              }
+            </div>
+          </section>
+
+          <section class="time-column">
+            <h4>Min</h4>
+            <div class="time-list">
+              @for (minute of minutes; track minute) {
+                <button
+                  type="button"
+                  class="time-option"
+                  [class.time-option--selected]="draftMinute() === minute"
+                  (click)="selectMinute(minute)"
+                >
+                  {{ minute }}
+                </button>
+              }
+            </div>
+          </section>
+        </div>
+
+        <div class="time-actions">
+          <button type="button" class="time-footer-btn time-footer-btn--ghost" (click)="clearValue()">Limpar</button>
+          <button type="button" class="time-footer-btn time-footer-btn--secondary" (click)="close()">Fechar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (isOpen() && isMobile()) {
+    <app-modal-sheet
+      title="Selecionar horário"
+      description="Escolha hora e minuto sem depender de um campo cru."
+      (closed)="close()"
+    >
+      <div sheet-body class="time-content">
+        <div class="time-content__header">
+          <strong>{{ draftValue() }}</strong>
+          <span>Escolha hora e minuto</span>
+        </div>
+
+        <div class="time-columns">
+          <section class="time-column">
+            <h4>Hora</h4>
+            <div class="time-list">
+              @for (hour of hours; track hour) {
+                <button
+                  type="button"
+                  class="time-option"
+                  [class.time-option--selected]="draftHour() === hour"
+                  (click)="selectHour(hour)"
+                >
+                  {{ hour }}
+                </button>
+              }
+            </div>
+          </section>
+
+          <section class="time-column">
+            <h4>Min</h4>
+            <div class="time-list">
+              @for (minute of minutes; track minute) {
+                <button
+                  type="button"
+                  class="time-option"
+                  [class.time-option--selected]="draftMinute() === minute"
+                  (click)="selectMinute(minute)"
+                >
+                  {{ minute }}
+                </button>
+              }
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div sheet-footer class="time-actions">
+        <button type="button" class="time-footer-btn time-footer-btn--ghost" (click)="clearValue()">Limpar</button>
+        <button type="button" class="time-footer-btn time-footer-btn--primary" (click)="close()">Concluir</button>
+      </div>
+    </app-modal-sheet>
+  }
+</div>

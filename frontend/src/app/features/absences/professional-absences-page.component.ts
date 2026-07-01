@@ -14,12 +14,17 @@ import type {
   ProfessionalResponse,
 } from '../../core/api/api.models';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+import { ModalSheetComponent } from '../../shared/modal-sheet.component';
+import { DatePickerComponent } from '../../shared/date-picker.component';
+import { TimePickerComponent } from '../../shared/time-picker.component';
+import { localDateTimeToUtc } from '../../core/utils/date-time';
 
 const PROFESSIONALS_PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-professional-absences-page',
   standalone: true,
+  imports: [ModalSheetComponent, DatePickerComponent, TimePickerComponent],
   templateUrl: './professional-absences-page.component.html',
   styleUrl: './professional-absences-page.component.css',
 })
@@ -52,8 +57,10 @@ export class ProfessionalAbsencesPageComponent implements OnInit {
   readonly selectedProfessionalId = signal('');
   readonly fieldErrors = signal<Record<string, string[]>>({});
 
-  readonly formStartLocal = signal('');
-  readonly formEndLocal   = signal('');
+  readonly formStartDate = signal('');
+  readonly formStartTime = signal('');
+  readonly formEndDate   = signal('');
+  readonly formEndTime   = signal('');
   readonly formReason     = signal('');
   readonly activeProfessionalId = computed(() =>
     this.role() === 'administradora'
@@ -101,8 +108,10 @@ export class ProfessionalAbsencesPageComponent implements OnInit {
   }
 
   openCreate(): void {
-    this.formStartLocal.set('');
-    this.formEndLocal.set('');
+    this.formStartDate.set('');
+    this.formStartTime.set('');
+    this.formEndDate.set('');
+    this.formEndTime.set('');
     this.formReason.set('');
     this.showForm.set(true);
     this.formError.set(null);
@@ -120,14 +129,33 @@ export class ProfessionalAbsencesPageComponent implements OnInit {
     const profId = this.activeProfessionalId();
     if (!profId) return;
 
-    this.isSaving.set(true);
     this.formError.set(null);
     this.fieldErrors.set({});
+
+    const startAtUtc = localDateTimeToUtc(this.formStartDate(), this.formStartTime());
+    const endAtUtc = localDateTimeToUtc(this.formEndDate(), this.formEndTime());
+
+    if (!startAtUtc || !endAtUtc) {
+      this.fieldErrors.set({
+        ...(startAtUtc ? {} : { startAtUtc: ['Selecione data e hora válidas para o início.'] }),
+        ...(endAtUtc ? {} : { endAtUtc: ['Selecione data e hora válidas para o fim.'] }),
+      });
+      return;
+    }
+
+    if (new Date(endAtUtc) <= new Date(startAtUtc)) {
+      this.fieldErrors.set({
+        endAtUtc: ['O fim precisa acontecer depois do início.'],
+      });
+      return;
+    }
+
+    this.isSaving.set(true);
     try {
       const req: CreateProfessionalAbsenceRequest = {
         professionalId: profId,
-        startAtUtc: new Date(this.formStartLocal()).toISOString(),
-        endAtUtc:   new Date(this.formEndLocal()).toISOString(),
+        startAtUtc,
+        endAtUtc,
         reason:     this.formReason(),
       };
       const created = await this.api.create(req);
@@ -208,5 +236,13 @@ export class ProfessionalAbsencesPageComponent implements OnInit {
 
   fieldError(field: 'professionalId' | 'startAtUtc' | 'endAtUtc' | 'reason'): string | null {
     return this.fieldErrors()[field]?.[0] ?? null;
+  }
+
+  clearFieldError(field: 'professionalId' | 'startAtUtc' | 'endAtUtc' | 'reason'): void {
+    this.fieldErrors.update(errors => {
+      const next = { ...errors };
+      delete next[field];
+      return next;
+    });
   }
 }

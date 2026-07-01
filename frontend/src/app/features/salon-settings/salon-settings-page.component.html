@@ -110,15 +110,23 @@
             </label>
             @if (!h.isClosed) {
               <div class="hours-times">
-                <input type="time" class="time-input" [value]="h.startLocalTime ?? ''"
-                  (change)="updateHourTime(i, 'startLocalTime', $any($event.target).value)"
-                  [attr.aria-label]="daysPt[h.dayOfWeek] + ' abertura'"
-                  [attr.aria-invalid]="hourFieldError(i, 'startLocalTime') ? 'true' : null">
+                <app-time-picker
+                  class="time-input"
+                  [compact]="true"
+                  [value]="h.startLocalTime ?? ''"
+                  (valueChange)="updateHourTime(i, 'startLocalTime', $event)"
+                  [ariaLabel]="daysPt[h.dayOfWeek] + ' abertura'"
+                  [invalid]="!!hourFieldError(i, 'startLocalTime')"
+                />
                 <span class="time-sep">–</span>
-                <input type="time" class="time-input" [value]="h.endLocalTime ?? ''"
-                  (change)="updateHourTime(i, 'endLocalTime', $any($event.target).value)"
-                  [attr.aria-label]="daysPt[h.dayOfWeek] + ' fechamento'"
-                  [attr.aria-invalid]="hourFieldError(i, 'endLocalTime') ? 'true' : null">
+                <app-time-picker
+                  class="time-input"
+                  [compact]="true"
+                  [value]="h.endLocalTime ?? ''"
+                  (valueChange)="updateHourTime(i, 'endLocalTime', $event)"
+                  [ariaLabel]="daysPt[h.dayOfWeek] + ' fechamento'"
+                  [invalid]="!!hourFieldError(i, 'endLocalTime')"
+                />
               </div>
               @if (hourFieldError(i, 'startLocalTime')) {
                 <span class="field-error" role="alert">{{ hourFieldError(i, 'startLocalTime') }}</span>
