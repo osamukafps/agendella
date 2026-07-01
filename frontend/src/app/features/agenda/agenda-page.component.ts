@@ -173,6 +173,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
   protected readonly appointments = signal<AppointmentResponse[]>([]);
   protected readonly businessHours = signal<BusinessHourDto[]>([]);
   protected readonly lookupMaps = signal<AgendaLookupMaps>(buildAgendaLookupMaps([], [], []));
+  protected readonly servicesCatalog = signal<ServiceResponse[]>([]);
   protected readonly viewOptions: AgendaViewOption[] = [
     { id: 'day', label: 'Dia' },
     { id: 'week', label: 'Semana' },
@@ -216,6 +217,15 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
   protected readonly reschedulePreferredDate = computed(() => {
     const appointment = this.rescheduleSheetAppointment();
     return appointment ? toApiDate(new Date(appointment.startAtUtc)) : this.selectedDate();
+  });
+
+  protected readonly rescheduleCurrentService = computed(() => {
+    const appointment = this.rescheduleSheetAppointment();
+    if (!appointment) {
+      return null;
+    }
+
+    return this.servicesCatalog().find(service => service.id === appointment.appointment.serviceId) ?? null;
   });
 
   protected readonly weekDays = computed(() => getWeekDays(parseApiDate(this.selectedDate())));
@@ -692,6 +702,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
       this.collectAllServices(),
     ]);
 
+    this.servicesCatalog.set(services);
     this.lookupMaps.set(buildAgendaLookupMaps(clients, professionals, services));
   }
 

@@ -5,8 +5,10 @@ import { ProfessionalsApiService } from '../professionals/professionals-api.serv
 import { ClientsApiService } from '../clients/clients-api.service';
 import { ServicesApiService } from '../services/services-api.service';
 import { ClientQuickFormComponent } from '../clients/client-quick-form.component';
-import { conflictTypeLabel, formatDuration, formatDurationMinutes } from './agenda-utils';
+import { conflictTypeLabel, formatDuration, formatDurationMinutes, getDurationMinutes } from './agenda-utils';
 import { getApiErrorMessage, mapApiErrorToUi } from '../../core/api/api-error.utils';
+import { isValidTimeValue, localDateTimeToUtc, utcToLocalDateTimeParts } from '../../core/utils/date-time';
+import { TimePickerComponent } from '../../shared/time-picker.component';
 import type {
   AppointmentResponse,
   AvailabilitySlotDto,
@@ -61,10 +63,98 @@ function matchesSearch(query: string, values: Array<string | null | undefined>):
   return values.some(value => normalizeSearch(value ?? '').includes(normalizedQuery));
 }
 
+function addMinutesToUtc(utcString: string, minutes: number): string {
+  const date = new Date(utcString);
+  date.setMinutes(date.getMinutes() + minutes);
+  return date.toISOString();
+}
+
+function sameUtcInstant(left: string, right: string): boolean {
+  return new Date(left).getTime() === new Date(right).getTime();
+}
+
+export function formatServicePrice(amount: number | null | undefined, currency: string | null | undefined): string {
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || !currency?.trim()) {
+    return '';
+  }
+
+  try {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  } catch {
+    return '';
+  }
+}
+
+export function getSuggestedEndTime(
+  slot: AvailabilitySlotDto,
+  manualDurationMinutes: number | null,
+): string {
+  const nextEndAtUtc = manualDurationMinutes && manualDurationMinutes > 0
+    ? addMinutesToUtc(slot.startAtUtc, manualDurationMinutes)
+    : slot.endAtUtc;
+
+  return utcToLocalDateTimeParts(nextEndAtUtc).time;
+}
+
+export interface ManualEndResolution {
+  endAtUtc: string | null;
+  manualEndAtUtc: string | null;
+  error: string | null;
+}
+
+export function resolveManualEndSelection(
+  slot: AvailabilitySlotDto | null,
+  endTime: string,
+): ManualEndResolution {
+  if (!slot) {
+    return {
+      endAtUtc: null,
+      manualEndAtUtc: null,
+      error: 'Selecione um horário inicial antes de ajustar o fim.',
+    };
+  }
+
+  if (!isValidTimeValue(endTime)) {
+    return {
+      endAtUtc: null,
+      manualEndAtUtc: null,
+      error: 'Selecione um horário final válido.',
+    };
+  }
+
+  const { date } = utcToLocalDateTimeParts(slot.startAtUtc);
+  const endAtUtc = localDateTimeToUtc(date, endTime);
+
+  if (!endAtUtc) {
+    return {
+      endAtUtc: null,
+      manualEndAtUtc: null,
+      error: 'Não foi possível interpretar o horário final informado.',
+    };
+  }
+
+  if (new Date(endAtUtc).getTime() <= new Date(slot.startAtUtc).getTime()) {
+    return {
+      endAtUtc: null,
+      manualEndAtUtc: null,
+      error: 'O horário final deve ser maior que o inicial.',
+    };
+  }
+
+  return {
+    endAtUtc,
+    manualEndAtUtc: sameUtcInstant(endAtUtc, slot.endAtUtc) ? null : endAtUtc,
+    error: null,
+  };
+}
+
 @Component({
   selector: 'app-appointment-form',
   standalone: true,
-  imports: [AvailabilityPickerComponent, ClientQuickFormComponent],
+  imports: [AvailabilityPickerComponent, ClientQuickFormComponent, TimePickerComponent],
   templateUrl: './appointment-form.component.html',
   styleUrl: './appointment-form.component.css',
 })
@@ -76,7 +166,11 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
   @Input() currentClientName = '';
   @Input() currentServiceName = '';
   @Input() currentTimeRangeLabel = '';
+  @Input() currentStartAtUtc = '';
+  @Input() currentEndAtUtc = '';
   @Input() currentDurationMinutes = 0;
+  @Input() currentServicePriceAmount: number | null = null;
+  @Input() currentServiceCurrency = 'BRL';
   @Input() preferredDate = '';
   @Input() preferredProfessionalId?: string;
 
@@ -103,6 +197,9 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
   protected readonly selectedSlot = signal<AvailabilitySlotDto | null>(null);
   protected readonly selectedAvailabilityDate = signal('');
   protected readonly showNewClient = signal(false);
+  protected readonly selectedEndTime = signal('');
+  protected readonly manualDurationMinutes = signal<number | null>(null);
+  protected readonly hasManualEndOverride = signal(false);
 
   protected readonly filteredProfessionals = computed(() =>
     this.professionalsState.items().filter(professional =>
@@ -147,6 +244,14 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
     this.servicesState.items().find(item => item.id === this.selectedSvcId()) ?? null
   );
 
+  protected readonly selectedServicePriceLabel = computed(() =>
+    formatServicePrice(this.selectedService()?.priceAmount, this.selectedService()?.currency)
+  );
+
+  protected readonly currentServicePriceLabel = computed(() =>
+    formatServicePrice(this.currentServicePriceAmount, this.currentServiceCurrency)
+  );
+
   protected readonly durationLabel = computed(() => {
     if (this.mode === 'reschedule') {
       return this.currentDurationMinutes > 0
@@ -181,8 +286,34 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
       : (this.selectedProfessional()?.name ?? '')
   );
 
+  protected readonly timingSelection = computed(() => {
+    const slot = this.selectedSlot();
+    if (!slot) {
+      return null;
+    }
+
+    const startParts = utcToLocalDateTimeParts(slot.startAtUtc);
+    const suggestedEndTime = utcToLocalDateTimeParts(slot.endAtUtc).time;
+    const manualEnd = resolveManualEndSelection(slot, this.selectedEndTime());
+    const resolvedEndAtUtc = manualEnd.endAtUtc ?? slot.endAtUtc;
+    const resolvedEndTime = manualEnd.endAtUtc
+      ? utcToLocalDateTimeParts(manualEnd.endAtUtc).time
+      : this.selectedEndTime();
+
+    return {
+      startDate: startParts.date,
+      startTime: startParts.time,
+      suggestedEndTime,
+      resolvedEndAtUtc,
+      resolvedEndTime,
+      durationLabel: formatDurationMinutes(getDurationMinutes(slot.startAtUtc, resolvedEndAtUtc)),
+      validationError: manualEnd.error,
+    };
+  });
+
   protected readonly canSubmit = computed(() => {
-    if (!this.selectedSlot()) {
+    const timing = this.timingSelection();
+    if (!timing || timing.validationError) {
       return false;
     }
 
@@ -209,6 +340,16 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
     if (changes['preferredProfessionalId']?.currentValue && !this.selectedProfId()) {
       this.selectedProfId.set(this.preferredProfessionalId ?? '');
     }
+
+    if (
+      this.mode === 'reschedule'
+      && (
+        changes['currentDurationMinutes']
+        || changes['currentEndAtUtc']
+      )
+    ) {
+      this.initializeRescheduleTiming();
+    }
   }
 
   protected fieldError(...keys: string[]): string | null {
@@ -233,7 +374,7 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
 
   protected chooseProfessional(id: string): void {
     this.selectedProfId.set(id);
-    this.selectedSlot.set(null);
+    this.clearSelectedTiming(true);
     this.clearFieldErrors('professionalId', 'startAtUtc', 'newStartAtUtc');
   }
 
@@ -244,7 +385,7 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
 
   protected chooseService(id: string): void {
     this.selectedSvcId.set(id);
-    this.selectedSlot.set(null);
+    this.clearSelectedTiming(false);
     this.clearFieldErrors('serviceId', 'startAtUtc', 'newStartAtUtc');
   }
 
@@ -266,13 +407,41 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
 
   protected onSlotSelected(slot: AvailabilitySlotDto | null): void {
     this.selectedSlot.set(slot);
-    this.clearFieldErrors('startAtUtc', 'newStartAtUtc');
+    if (!slot) {
+      this.selectedEndTime.set('');
+    } else {
+      this.selectedEndTime.set(getSuggestedEndTime(
+        slot,
+        this.hasManualEndOverride() ? this.manualDurationMinutes() : null,
+      ));
+    }
+
+    this.clearFieldErrors('startAtUtc', 'newStartAtUtc', 'manualEndAtUtc', 'newManualEndAtUtc');
   }
 
   protected onAvailabilityDateSelected(date: string): void {
     this.selectedAvailabilityDate.set(date);
-    this.selectedSlot.set(null);
+    this.clearSelectedTiming(true);
     this.clearFieldErrors('startAtUtc', 'newStartAtUtc');
+  }
+
+  protected updateSelectedEndTime(value: string): void {
+    this.selectedEndTime.set(value);
+    this.clearFieldErrors('manualEndAtUtc', 'newManualEndAtUtc');
+
+    const slot = this.selectedSlot();
+    const resolved = resolveManualEndSelection(slot, value);
+    if (!slot || resolved.error || !resolved.endAtUtc) {
+      return;
+    }
+
+    const isManualOverride = resolved.manualEndAtUtc !== null;
+    this.hasManualEndOverride.set(isManualOverride);
+    this.manualDurationMinutes.set(
+      isManualOverride
+        ? getDurationMinutes(slot.startAtUtc, resolved.endAtUtc)
+        : null
+    );
   }
 
   protected async loadMoreProfessionals(): Promise<void> {
@@ -306,6 +475,13 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
   protected async submit(event: Event): Promise<void> {
     event.preventDefault();
     if (!this.canSubmit()) {
+      const timing = this.timingSelection();
+      if (timing?.validationError) {
+        this.fieldErrors.set({
+          ...this.fieldErrors(),
+          [this.endFieldKey()]: [timing.validationError],
+        });
+      }
       return;
     }
 
@@ -315,17 +491,23 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
 
     try {
       const slot = this.selectedSlot()!;
+      const manualEnd = resolveManualEndSelection(slot, this.selectedEndTime());
+      if (manualEnd.error) {
+        this.fieldErrors.set({ [this.endFieldKey()]: [manualEnd.error] });
+        return;
+      }
+
       const result = this.mode === 'reschedule'
         ? await this.agendaApi.reschedule(this.appointmentId!, {
           newStartAtUtc: slot.startAtUtc,
-          newManualEndAtUtc: null,
+          newManualEndAtUtc: manualEnd.manualEndAtUtc,
         })
         : await this.agendaApi.create({
           clientId: this.selectedClientId(),
           professionalId: this.selectedProfId(),
           serviceId: this.selectedSvcId(),
           startAtUtc: slot.startAtUtc,
-          manualEndAtUtc: null,
+          manualEndAtUtc: manualEnd.manualEndAtUtc,
         });
 
       this.saved.emit(result);
@@ -360,6 +542,7 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
       if (this.preferredDate) {
         this.selectedAvailabilityDate.set(this.preferredDate);
       }
+      this.initializeRescheduleTiming();
       return;
     }
 
@@ -452,5 +635,35 @@ export class AppointmentFormComponent implements OnInit, OnChanges {
         state.isLoadingMore.set(false);
       }
     }
+  }
+
+  protected formatServicePrice(amount: number | null | undefined, currency: string | null | undefined): string {
+    return formatServicePrice(amount, currency);
+  }
+
+  private clearSelectedTiming(preserveManualDuration: boolean): void {
+    this.selectedSlot.set(null);
+    this.selectedEndTime.set('');
+
+    if (!preserveManualDuration) {
+      this.hasManualEndOverride.set(false);
+      this.manualDurationMinutes.set(null);
+    }
+
+    this.clearFieldErrors('startAtUtc', 'newStartAtUtc', 'manualEndAtUtc', 'newManualEndAtUtc');
+  }
+
+  private initializeRescheduleTiming(): void {
+    if (this.mode !== 'reschedule') {
+      return;
+    }
+
+    this.selectedEndTime.set(this.currentEndAtUtc ? utcToLocalDateTimeParts(this.currentEndAtUtc).time : '');
+    this.manualDurationMinutes.set(this.currentDurationMinutes > 0 ? this.currentDurationMinutes : null);
+    this.hasManualEndOverride.set(this.currentDurationMinutes > 0);
+  }
+
+  private endFieldKey(): 'manualEndAtUtc' | 'newManualEndAtUtc' {
+    return this.mode === 'reschedule' ? 'newManualEndAtUtc' : 'manualEndAtUtc';
   }
 }

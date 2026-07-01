@@ -4,6 +4,12 @@ import {
   toApiDate,
   formatLocalTime,
 } from './agenda-utils';
+import {
+  formatServicePrice,
+  getSuggestedEndTime,
+  resolveManualEndSelection,
+} from './appointment-form.component';
+import { localDateTimeToUtc, utcToLocalDateTimeParts } from '../../core/utils/date-time';
 import type { AppointmentResponse } from '../../core/api/api.models';
 
 // ─── Form validation helpers ──────────────────────────────────────────────────
@@ -75,6 +81,67 @@ describe('AppointmentForm — modo create vs reschedule', () => {
   it('modo reschedule: só precisa de slot', () => {
     const rescheduleFields = { selectedSlot: { startAtUtc: '2024-06-10T15:00:00Z', endAtUtc: '2024-06-10T16:00:00Z' } };
     expect(isRescheduleFormValid(rescheduleFields)).toBe(true);
+  });
+});
+
+describe('AppointmentForm — horário final manual', () => {
+  const slot = {
+    startAtUtc: '2024-06-10T13:00:00.000Z',
+    endAtUtc: '2024-06-10T14:00:00.000Z',
+  };
+  const startParts = utcToLocalDateTimeParts(slot.startAtUtc);
+  const endParts = utcToLocalDateTimeParts(slot.endAtUtc);
+
+  function shiftLocalTime(time: string, minutesToAdd: number): string {
+    const [hours, minutes] = time.split(':').map(Number);
+    const date = new Date(2024, 0, 1, hours, minutes + minutesToAdd);
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  }
+
+  it('mantém o fim sugerido quando não há duração manual preservada', () => {
+    expect(getSuggestedEndTime(slot, null)).toBe(endParts.time);
+  });
+
+  it('preserva a duração manual ao trocar o horário inicial', () => {
+    expect(getSuggestedEndTime(slot, 90)).toBe(shiftLocalTime(startParts.time, 90));
+  });
+
+  it('envia null quando o fim escolhido continua igual ao sugerido', () => {
+    expect(resolveManualEndSelection(slot, endParts.time)).toEqual({
+      endAtUtc: slot.endAtUtc,
+      manualEndAtUtc: null,
+      error: null,
+    });
+  });
+
+  it('envia o novo fim quando a usuária estende o atendimento', () => {
+    const manualEndTime = shiftLocalTime(endParts.time, 30);
+    const expectedEndAtUtc = localDateTimeToUtc(startParts.date, manualEndTime);
+
+    expect(resolveManualEndSelection(slot, manualEndTime)).toEqual({
+      endAtUtc: expectedEndAtUtc,
+      manualEndAtUtc: expectedEndAtUtc,
+      error: null,
+    });
+  });
+
+  it('rejeita fim igual ou anterior ao horário inicial', () => {
+    expect(resolveManualEndSelection(slot, startParts.time)).toEqual({
+      endAtUtc: null,
+      manualEndAtUtc: null,
+      error: 'O horário final deve ser maior que o inicial.',
+    });
+  });
+});
+
+describe('AppointmentForm — preço do serviço', () => {
+  it('formata moeda brasileira com a moeda do serviço', () => {
+    expect(formatServicePrice(80, 'BRL')).toBe('R$ 80,00');
+  });
+
+  it('omite preço quando faltam dados válidos', () => {
+    expect(formatServicePrice(Number.NaN, 'BRL')).toBe('');
+    expect(formatServicePrice(80, '')).toBe('');
   });
 });
 

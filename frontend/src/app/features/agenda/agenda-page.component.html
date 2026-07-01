@@ -95,7 +95,7 @@
 
                 <div class="agenda-item__content">
                   <strong>{{ appointment.clientName }}</strong>
-                  <p>{{ appointment.serviceName }} · {{ appointment.professionalName }}</p>
+                  <p>{{ appointment.serviceName }} · {{ appointment.professionalName }} · {{ appointment.timeRangeLabel }}</p>
                   @if (appointment.appointment.requiresReview) {
                     <span class="agenda-item__review">
                       Requer revisão
@@ -157,7 +157,7 @@
 
                       <div class="agenda-item__content">
                         <strong>{{ appointment.clientName }}</strong>
-                        <p>{{ appointment.serviceName }} · {{ appointment.professionalName }}</p>
+                        <p>{{ appointment.serviceName }} · {{ appointment.professionalName }} · {{ appointment.timeRangeLabel }}</p>
                         @if (appointment.appointment.requiresReview) {
                           <span class="agenda-item__review">
                             Requer revisão
@@ -326,7 +326,11 @@
         [currentClientName]="rescheduleSheetAppointment()!.clientName"
         [currentServiceName]="rescheduleSheetAppointment()!.serviceName"
         [currentTimeRangeLabel]="rescheduleSheetAppointment()!.timeRangeLabel"
+        [currentStartAtUtc]="rescheduleSheetAppointment()!.startAtUtc"
+        [currentEndAtUtc]="rescheduleSheetAppointment()!.endAtUtc"
         [currentDurationMinutes]="rescheduleSheetAppointment()!.durationMinutes"
+        [currentServicePriceAmount]="rescheduleCurrentService()?.priceAmount ?? null"
+        [currentServiceCurrency]="rescheduleCurrentService()?.currency ?? 'BRL'"
         [preferredDate]="reschedulePreferredDate()"
         (saved)="handleAppointmentRescheduled($event)"
         (cancelled)="closeRescheduleSheet()"

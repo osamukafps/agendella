@@ -183,7 +183,15 @@
                 (click)="chooseService(service.id)"
               >
                 <strong>{{ service.name }}</strong>
-                <span>{{ service.durationMinutes }} min{{ service.description ? ' · ' + service.description : '' }}</span>
+                <span class="option-card__meta">
+                  <span>{{ service.durationMinutes }} min</span>
+                  @if (formatServicePrice(service.priceAmount, service.currency)) {
+                    <span class="service-price">{{ formatServicePrice(service.priceAmount, service.currency) }}</span>
+                  }
+                </span>
+                @if (service.description) {
+                  <span class="option-card__description">{{ service.description }}</span>
+                }
               </button>
             } @empty {
               <div class="option-empty">Nenhum serviço encontrado entre os itens carregados.</div>
@@ -223,6 +231,9 @@
             <article>
               <span class="appointment-summary__label">Serviço</span>
               <strong>{{ currentServiceName || 'Serviço atual' }}</strong>
+              @if (currentServicePriceLabel()) {
+                <span class="appointment-summary__price">{{ currentServicePriceLabel() }}</span>
+              }
             </article>
             <article>
               <span class="appointment-summary__label">Profissional</span>
@@ -248,8 +259,20 @@
               }
             </p>
           </div>
-          @if (selectedService()) {
-            <span class="selection-section__meta">{{ durationLabel() }}</span>
+          @if (mode === 'create' && selectedService()) {
+            <span class="selection-section__meta selection-section__meta--service">
+              <span>{{ durationLabel() }}</span>
+              @if (selectedServicePriceLabel()) {
+                <span class="service-price">{{ selectedServicePriceLabel() }}</span>
+              }
+            </span>
+          } @else if (mode === 'reschedule' && durationLabel()) {
+            <span class="selection-section__meta selection-section__meta--service">
+              <span>{{ durationLabel() }}</span>
+              @if (currentServicePriceLabel()) {
+                <span class="service-price">{{ currentServicePriceLabel() }}</span>
+              }
+            </span>
           }
         </div>
 
@@ -267,6 +290,42 @@
           />
         } @else if (mode === 'create') {
           <p class="picker-hint">Escolha profissional e serviço para ver os horários disponíveis do sistema.</p>
+        }
+
+        @if (timingSelection(); as timing) {
+          <div class="time-range-editor">
+            <div class="time-range-editor__grid">
+              <div class="field">
+                <label class="field-label">Horário inicial</label>
+                <div class="time-range-editor__static">
+                  <strong>{{ timing.startTime }}</strong>
+                  <span>{{ timing.startDate }}</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="af-end-time">Horário final</label>
+                <app-time-picker
+                  ariaLabel="Selecionar horário final do agendamento"
+                  [value]="selectedEndTime()"
+                  [invalid]="!!fieldError('manualEndAtUtc', 'newManualEndAtUtc') || !!timing.validationError"
+                  (valueChange)="updateSelectedEndTime($event)"
+                />
+              </div>
+            </div>
+
+            <div class="time-range-editor__meta">
+              <span>Fim sugerido: {{ timing.suggestedEndTime }}</span>
+              <span>Duração real: {{ timing.durationLabel }}</span>
+              <span>Intervalo: {{ timing.startTime }} - {{ timing.resolvedEndTime }}</span>
+            </div>
+
+            @if (fieldError('manualEndAtUtc', 'newManualEndAtUtc') || timing.validationError) {
+              <span class="field-error" role="alert">
+                {{ fieldError('manualEndAtUtc', 'newManualEndAtUtc') || timing.validationError }}
+              </span>
+            }
+          </div>
         }
       </section>
 
