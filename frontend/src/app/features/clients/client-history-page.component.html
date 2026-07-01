@@ -1,5 +1,5 @@
 <div class="page-layout">
-  <header class="page-header">
+  <header class="page-header history-header">
     <div class="page-header__content">
       <p class="page-header__eyebrow">HISTÓRICO</p>
       <div class="page-header__title-row">
@@ -8,14 +8,14 @@
           Voltar
         </a>
         <span class="page-header__icon" aria-hidden="true">
-          <app-icon name="book-saved" [size]="22" />
+          <app-icon name="book-saved" [size]="24" />
         </span>
         <h2 class="page-title">
           @if (client()) { Histórico de {{ client()!.name }} }
           @else { Histórico do cliente }
         </h2>
       </div>
-      <p class="page-header__description">Consulte os eventos mais recentes ligados a esta cliente.</p>
+      <p class="page-header__description">Consulte os eventos e atendimentos recentes desta cliente.</p>
     </div>
   </header>
 
@@ -31,21 +31,64 @@
       </div>
     </div>
   } @else {
-    <ul class="items-list" role="list" aria-label="Histórico de eventos">
-      @for (evt of events(); track evt.id) {
-        <li class="item-card">
-          <div class="item-info">
-            <span class="item-name">{{ eventLabel(evt.type) }}</span>
-            <span class="item-meta">{{ formatDate(evt.occurredAtUtc) }}</span>
-            @if (evt.description) {
-              <span class="item-meta" style="margin-top: 2px;">{{ evt.description }}</span>
-            }
+    <div class="history-timeline" aria-label="Histórico de eventos da cliente">
+      @for (group of timelineGroups(); track group.dateKey) {
+        <section class="history-group" [attr.aria-label]="'Eventos de ' + group.label">
+          <div class="history-group__header">
+            <h3 class="history-group__title">{{ group.label }}</h3>
+            <span class="history-group__count">
+              {{ group.items.length }} {{ group.items.length === 1 ? 'evento' : 'eventos' }}
+            </span>
           </div>
-        </li>
+
+          <ol class="history-group__list">
+            @for (item of group.items; track item.id) {
+              <li
+                class="history-entry"
+                [style.--history-accent]="item.visual.accentColor"
+                [style.--history-surface]="item.visual.surfaceColor"
+                [style.--history-border]="item.visual.borderColor"
+                [style.--history-badge-bg]="item.visual.badgeBackground"
+                [style.--history-badge-fg]="item.visual.badgeColor"
+              >
+                <span class="history-entry__time">{{ item.timeLabel }}</span>
+
+                <div class="history-entry__content">
+                  <span class="history-entry__marker" aria-hidden="true">
+                    <span class="history-entry__marker-icon">
+                      <app-icon [name]="item.visual.icon" [size]="18" />
+                    </span>
+                  </span>
+
+                  <article class="history-card">
+                    <div class="history-card__top">
+                      <div class="history-card__title-block">
+                        <h4 class="history-card__title">{{ item.title }}</h4>
+                        <p class="history-card__subtitle">Registrado às {{ item.timeLabel }}</p>
+                      </div>
+                      <span class="history-card__badge">{{ item.visual.badgeLabel }}</span>
+                    </div>
+
+                    @if (item.description) {
+                      <p class="history-card__description">{{ item.description }}</p>
+                    }
+
+                    @if (item.scheduleLabel) {
+                      <div class="history-card__detail">
+                        <app-icon name="clock" [size]="15" />
+                        <span>{{ item.scheduleLabel }}</span>
+                      </div>
+                    }
+                  </article>
+                </div>
+              </li>
+            }
+          </ol>
+        </section>
       } @empty {
-        <li class="state-empty">Nenhum evento no histórico deste cliente.</li>
+        <div class="state-empty">Nenhum evento no histórico deste cliente.</div>
       }
-    </ul>
+    </div>
 
     @if (nextCursor()) {
       <div class="list-footer">

@@ -264,6 +264,10 @@
 .btn-icon--danger { color: var(--color-error); }
 .btn-icon--danger:hover { background: var(--color-error-subtle); border-color: var(--color-error); }
 
+#confirm-save {
+  margin-top: 12px;
+}
+
 @keyframes page-spin {
   from {
     transform: rotate(0deg);

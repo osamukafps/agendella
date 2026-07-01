@@ -137,7 +137,7 @@
             <span class="field-error" role="alert">{{ settingsFieldError('minimumCancellationNoticeMinutes') }}</span>
           }
         </div>
-        <button type="submit" class="btn-primary" [disabled]="isSavingSettings()">
+        <button type="submit" class="btn-primary" id='confirm-save' [disabled]="isSavingSettings()">
           <app-icon [name]="isSavingSettings() ? 'loading' : 'check-tick'" [size]="16" [spin]="isSavingSettings()" />
           {{ isSavingSettings() ? 'Salvando…' : 'Salvar dados' }}
         </button>

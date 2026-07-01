@@ -144,11 +144,13 @@
 }
 
 .shell-topbar__greeting-flower {
-  display: inline-block;
-  margin-left: 0.18em;
-  font-size: 0.78em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.16em;
+  font-size: 0.96em;
   line-height: 1;
-  transform: translateY(-0.04em);
+  transform: translateY(-0.06em);
 }
 
 .shell-topbar__meta {
