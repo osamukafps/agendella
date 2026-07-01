@@ -73,6 +73,10 @@
   line-height: var(--leading-relaxed);
 }
 
+.selection-section__support {
+  max-width: 46ch;
+}
+
 .selection-section__meta {
   color: var(--color-neutral-600);
   font-size: var(--text-xs);

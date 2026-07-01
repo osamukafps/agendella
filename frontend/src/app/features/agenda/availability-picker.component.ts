@@ -1,9 +1,16 @@
 import { Component, EventEmitter, Input, OnChanges, Output, computed, inject, signal } from '@angular/core';
 import { AgendaApiService } from './agenda-api.service';
-import { formatSlotTime, getWeekDays, parseApiDate, toApiDate } from './agenda-utils';
+import { formatLocalTime, formatSlotTime, getWeekDays, parseApiDate, toApiDate } from './agenda-utils';
 import { getApiErrorMessage } from '../../core/api/api-error.utils';
 import type { AvailabilitySlotDto } from '../../core/api/api.models';
 import type { WeekDay } from './agenda-utils';
+
+interface AvailabilityOptionViewModel {
+  slot: AvailabilitySlotDto;
+  startLabel: string;
+  endLabel: string;
+  rangeLabel: string;
+}
 
 @Component({
   selector: 'app-availability-picker',
@@ -50,18 +57,33 @@ import type { WeekDay } from './agenda-utils';
           Nenhum horário disponível para este dia.
         </div>
       } @else {
-        <div class="slots-grid" role="group" [attr.aria-label]="'Horários disponíveis para ' + selectedDate()">
-          @for (slot of slots(); track slot.startAtUtc) {
+        <div class="slots-panel">
+          <div class="slots-panel__header">
+            <div>
+              <strong>Horários disponíveis</strong>
+              <span>Escolha o início do atendimento. O fim sugerido aparece no formulário.</span>
+            </div>
+            <span>{{ slotOptions().length }} opção{{ slotOptions().length === 1 ? '' : 'ões' }}</span>
+          </div>
+
+          <div class="slots-list" role="listbox" [attr.aria-label]="'Horários disponíveis para ' + selectedDate()">
+            @for (option of slotOptions(); track option.slot.startAtUtc) {
             <button
               type="button"
-              class="slot-btn"
-              [class.slot-btn--selected]="isSelected(slot)"
-              (click)="selectSlot(slot)"
-              [attr.aria-pressed]="isSelected(slot)"
+              class="slot-option"
+              [class.slot-option--selected]="isSelected(option.slot)"
+              (click)="selectSlot(option.slot)"
+              [attr.aria-selected]="isSelected(option.slot)"
+              role="option"
             >
-              {{ formatSlot(slot) }}
+                <span class="slot-option__range">{{ option.rangeLabel }}</span>
+                <span class="slot-option__meta">
+                  <span>Início {{ option.startLabel }}</span>
+                  <span>Fim sugerido {{ option.endLabel }}</span>
+                </span>
             </button>
-          }
+            }
+          </div>
         </div>
       }
     </div>
@@ -118,16 +140,84 @@ import type { WeekDay } from './agenda-utils';
       color: var(--color-warning);
       font-size: var(--text-sm);
     }
-    .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: var(--space-2); }
-    .slot-btn {
-      min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
-      background: var(--color-surface); font-family: var(--font-body); font-size: var(--text-sm);
-      font-weight: 500; color: var(--color-text-primary); cursor: pointer; transition: background 0.1s;
+    .slots-panel {
+      display: grid;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border: 1px solid rgba(124, 59, 80, 0.12);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(245, 232, 237, 0.38), rgba(255, 255, 255, 0.96));
     }
-    .slot-btn:hover { background: var(--color-primary-subtle); border-color: var(--color-primary-light); }
-    .slot-btn--selected { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+    .slots-panel__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-3);
+      color: var(--color-text-secondary);
+      font-size: var(--text-xs);
+    }
+    .slots-panel__header div {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+    .slots-panel__header strong {
+      color: var(--color-text-primary);
+      font-size: var(--text-sm);
+    }
+    .slots-list {
+      display: grid;
+      gap: var(--space-2);
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .slot-option {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      min-height: 58px;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      background: var(--color-surface);
+      color: var(--color-text-primary);
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+    }
+    .slot-option:hover {
+      background: var(--color-primary-subtle);
+      border-color: var(--color-primary-light);
+    }
+    .slot-option--selected {
+      border-color: var(--color-primary);
+      background: var(--color-primary-subtle);
+      box-shadow: inset 0 0 0 1px rgba(124, 59, 80, 0.12);
+    }
+    .slot-option__range {
+      font-size: var(--text-sm);
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .slot-option__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      color: var(--color-text-secondary);
+      font-size: var(--text-xs);
+      line-height: 1.4;
+    }
     @media (min-width: 768px) {
       .week-strip { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+      .slots-list {
+        max-height: 320px;
+      }
+    }
+    @media (max-width: 767px) {
+      .slots-panel__header {
+        flex-direction: column;
+      }
     }
   `],
 })
@@ -148,6 +238,14 @@ export class AvailabilityPickerComponent implements OnChanges {
   readonly selected = signal<AvailabilitySlotDto | null>(null);
 
   readonly weekDays = computed<WeekDay[]>(() => getWeekDays(parseApiDate(this.anchorDate())));
+  readonly slotOptions = computed<AvailabilityOptionViewModel[]>(() =>
+    this.slots().map(slot => ({
+      slot,
+      startLabel: formatLocalTime(slot.startAtUtc),
+      endLabel: formatLocalTime(slot.endAtUtc),
+      rangeLabel: formatSlotTime(slot),
+    }))
+  );
   readonly weekRangeLabel = computed(() => {
     const days = this.weekDays();
     const first = days[0]?.date;
@@ -160,8 +258,6 @@ export class AvailabilityPickerComponent implements OnChanges {
     const formatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' });
     return `${formatter.format(parseApiDate(first))} - ${formatter.format(parseApiDate(last))}`;
   });
-
-  readonly formatSlot = formatSlotTime;
 
   async ngOnChanges(): Promise<void> {
     const nextDate = this.initialDate || this.selectedDate() || toApiDate();

@@ -258,6 +258,11 @@
                 Selecione profissional e serviço para carregar horários reais.
               }
             </p>
+            @if (activeProfessionalId() && durationMinutes() > 0) {
+              <p class="selection-section__support">
+                Escolha o horário inicial na lista. O fim sugerido aparece logo abaixo e pode ser ajustado manualmente.
+              </p>
+            }
           </div>
           @if (mode === 'create' && selectedService()) {
             <span class="selection-section__meta selection-section__meta--service">
