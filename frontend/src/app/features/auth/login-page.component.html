@@ -1,80 +1,109 @@
 <div class="login-page">
+  <section class="login-hero" aria-label="Apresentação do Agendella">
+    <div class="login-hero__eyebrow">Gestão bonita, rotina organizada</div>
+    <h1 class="login-hero__brand">agendella.</h1>
+    <p class="login-hero__lede">
+      A gestão do seu salão com a mesma sensação de cuidado que a cliente percebe no atendimento.
+    </p>
 
-  <!-- Branding -->
-  <div class="login-brand">
-    <h1 class="brand-name">agendella</h1>
-    <p class="brand-tagline">Gestão de salão, simplificada.</p>
-  </div>
+    <div class="login-hero__panel">
+      <p class="login-hero__panel-title">Tudo em um fluxo mais calmo e profissional</p>
+      <ul class="login-hero__highlights" aria-label="Destaques do produto">
+        <li>Agenda, clientes e equipe no mesmo lugar.</li>
+        <li>Visual editorial, pensado para uso diário no celular.</li>
+        <li>Rotina mais clara para administradora e profissionais.</li>
+      </ul>
+    </div>
 
-  <!-- Formulário de login -->
-  <form class="login-form" (submit)="onSubmit($event)" novalidate aria-label="Formulário de login">
+    <p class="login-hero__support">
+      Entrada exclusiva para equipes de salão já cadastradas no sistema.
+    </p>
+  </section>
 
-    <!-- Mensagem de erro -->
-    @if (error()) {
-      <div class="error-banner" role="alert" aria-live="assertive">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        {{ error() }}
+  <section class="login-card-shell" aria-label="Acesso ao sistema">
+    <div class="login-card">
+      <div class="login-card__header">
+        <p class="login-card__eyebrow">Acesso seguro</p>
+        <h2>Entrar no Agendella</h2>
+        <p>Acesse a gestão do seu salão.</p>
       </div>
-    }
 
-    <!-- Email -->
-    <div class="field">
-      <label class="field-label" for="email">Email</label>
-      <input
-        id="email"
-        class="field-input"
-        type="email"
-        name="email"
-        autocomplete="email"
-        autocapitalize="none"
-        spellcheck="false"
-        placeholder="voce@salaodaana.com"
-        [value]="email()"
-        (input)="email.set($any($event.target).value)"
-        [attr.aria-invalid]="error() ? 'true' : null"
-        [disabled]="isLoading()"
-        required
-      >
+      <form class="login-form" (submit)="onSubmit($event)" novalidate aria-label="Formulário de login">
+        @if (error()) {
+          <div class="error-banner" role="alert" aria-live="assertive">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>{{ error() }}</span>
+          </div>
+        }
+
+        <div class="field">
+          <label class="field-label" for="email">Email</label>
+          <input
+            id="email"
+            class="field-input"
+            type="email"
+            name="email"
+            autocomplete="email"
+            autocapitalize="none"
+            spellcheck="false"
+            placeholder="voce@salaodaana.com"
+            [value]="email()"
+            (input)="updateEmail($any($event.target).value)"
+            [attr.aria-invalid]="error() ? 'true' : null"
+            [disabled]="isLoading()"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="password">Senha</label>
+          <div class="field-password">
+            <input
+              id="password"
+              class="field-input field-input--password"
+              [type]="showPassword() ? 'text' : 'password'"
+              name="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              [value]="password()"
+              (input)="updatePassword($any($event.target).value)"
+              [attr.aria-invalid]="error() ? 'true' : null"
+              [disabled]="isLoading()"
+              required
+            >
+
+            <button
+              type="button"
+              class="password-toggle"
+              [attr.aria-label]="showPassword() ? 'Ocultar senha' : 'Mostrar senha'"
+              [attr.aria-pressed]="showPassword()"
+              [disabled]="isLoading()"
+              (click)="togglePasswordVisibility()"
+            >
+              {{ showPassword() ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="login-button"
+          [disabled]="isLoading()"
+          [attr.aria-busy]="isLoading()"
+        >
+          @if (isLoading()) {
+            <span class="button-spinner" aria-hidden="true"></span>
+            Entrando…
+          } @else {
+            Entrar
+          }
+        </button>
+      </form>
     </div>
-
-    <!-- Senha -->
-    <div class="field">
-      <label class="field-label" for="password">Senha</label>
-      <input
-        id="password"
-        class="field-input"
-        type="password"
-        name="password"
-        autocomplete="current-password"
-        placeholder="••••••••"
-        [value]="password()"
-        (input)="password.set($any($event.target).value)"
-        [attr.aria-invalid]="error() ? 'true' : null"
-        [disabled]="isLoading()"
-        required
-      >
-    </div>
-
-    <!-- Botão de login -->
-    <button
-      type="submit"
-      class="login-button"
-      [disabled]="isLoading()"
-      [attr.aria-busy]="isLoading()"
-    >
-      @if (isLoading()) {
-        <span class="button-spinner" aria-hidden="true"></span>
-        Entrando…
-      } @else {
-        Entrar
-      }
-    </button>
-
-  </form>
-
+  </section>
 </div>
