@@ -78,6 +78,8 @@
   background: var(--color-neutral-100);
   color: var(--color-text-secondary);
   cursor: pointer;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .modal-sheet__close:disabled {

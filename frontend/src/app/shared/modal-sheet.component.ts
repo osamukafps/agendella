@@ -31,9 +31,9 @@ let nextModalSheetId = 0;
             class="modal-sheet__close"
             (click)="closed.emit()"
             [disabled]="disableClose"
-            aria-label="Fechar formulário"
+            aria-label="Fechar"
           >
-            ✕
+            <span aria-hidden="true">&times;</span>
           </button>
         </div>
 

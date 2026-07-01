@@ -11,7 +11,9 @@
     (click)="toggleOpen()"
   >
     <span>{{ displayValue() }}</span>
-    <span class="picker-trigger__icon" aria-hidden="true">▾</span>
+    <span class="picker-trigger__icon" aria-hidden="true">
+      <app-icon name="arrow-circle-right" [size]="14" />
+    </span>
   </button>
 
   @if (isOpen() && !isMobile()) {
@@ -24,9 +26,13 @@
     >
       <div class="picker-calendar">
         <div class="picker-calendar__header">
-          <button type="button" class="picker-nav" (click)="previousMonth()" aria-label="Mês anterior">‹</button>
+          <button type="button" class="picker-nav" (click)="previousMonth()" aria-label="Mês anterior">
+            <app-icon name="arrow-circle-left" [size]="16" />
+          </button>
           <strong>{{ monthLabel() }}</strong>
-          <button type="button" class="picker-nav" (click)="nextMonth()" aria-label="Próximo mês">›</button>
+          <button type="button" class="picker-nav" (click)="nextMonth()" aria-label="Próximo mês">
+            <app-icon name="arrow-circle-right" [size]="16" />
+          </button>
         </div>
 
         <div class="picker-calendar__weekdays">
@@ -65,9 +71,13 @@
     >
       <div sheet-body class="picker-calendar">
         <div class="picker-calendar__header">
-          <button type="button" class="picker-nav" (click)="previousMonth()" aria-label="Mês anterior">‹</button>
+          <button type="button" class="picker-nav" (click)="previousMonth()" aria-label="Mês anterior">
+            <app-icon name="arrow-circle-left" [size]="16" />
+          </button>
           <strong>{{ monthLabel() }}</strong>
-          <button type="button" class="picker-nav" (click)="nextMonth()" aria-label="Próximo mês">›</button>
+          <button type="button" class="picker-nav" (click)="nextMonth()" aria-label="Próximo mês">
+            <app-icon name="arrow-circle-right" [size]="16" />
+          </button>
         </div>
 
         <div class="picker-calendar__weekdays">

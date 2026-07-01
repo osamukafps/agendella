@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 export interface ShellTopbarAction {
   label: string;
   ariaLabel?: string;
+  icon?: string;
   onClick: () => void;
 }
 

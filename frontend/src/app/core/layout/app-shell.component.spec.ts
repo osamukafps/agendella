@@ -10,8 +10,8 @@ import type { CollaboratorRole } from '../auth/auth.models';
 // A integração completa é verificada em testes E2E / browser.
 
 describe('getNavItemsForRole()', () => {
-  it('retorna 6 itens para administradora (Agenda, Clientes, Serviços, Equipe, Bloqueios, Ausências)', () => {
-    expect(getNavItemsForRole('administradora')).toHaveLength(6);
+  it('retorna 8 itens para administradora, incluindo Financeiro e Relatórios bloqueados', () => {
+    expect(getNavItemsForRole('administradora')).toHaveLength(8);
   });
 
   it('retorna Agenda para administradora', () => {
@@ -42,6 +42,16 @@ describe('getNavItemsForRole()', () => {
   it('inclui Ausências para administradora', () => {
     const items = getNavItemsForRole('administradora');
     expect(items.find(i => i.id === 'ausencias')).toBeDefined();
+  });
+
+  it('inclui Financeiro bloqueado para administradora', () => {
+    const items = getNavItemsForRole('administradora');
+    expect(items.find(i => i.id === 'financeiro' && i.disabled)).toBeDefined();
+  });
+
+  it('inclui Relatórios bloqueado para administradora', () => {
+    const items = getNavItemsForRole('administradora');
+    expect(items.find(i => i.id === 'relatorios' && i.disabled)).toBeDefined();
   });
 
   it('retorna 4 itens para profissional (Agenda, Clientes, Disponibilidade, Ausências)', () => {
@@ -106,8 +116,8 @@ describe('getNavItemsForRole()', () => {
 // ─── ALL_NAV_ITEMS ────────────────────────────────────────────────────────────
 
 describe('ALL_NAV_ITEMS', () => {
-  it('tem exatamente 7 itens de navegação', () => {
-    expect(ALL_NAV_ITEMS).toHaveLength(7);
+  it('tem exatamente 9 itens de navegação', () => {
+    expect(ALL_NAV_ITEMS).toHaveLength(9);
   });
 
   it('nenhum item tem roles vazio', () => {
@@ -131,6 +141,18 @@ describe('ALL_NAV_ITEMS', () => {
     expect(bloqueios?.roles).toEqual(['administradora']);
   });
 
+  it('Financeiro é restrito à administradora e começa bloqueado', () => {
+    const financeiro = ALL_NAV_ITEMS.find(i => i.id === 'financeiro');
+    expect(financeiro?.roles).toEqual(['administradora']);
+    expect(financeiro?.disabled).toBe(true);
+  });
+
+  it('Relatórios é restrito à administradora e começa bloqueado', () => {
+    const relatorios = ALL_NAV_ITEMS.find(i => i.id === 'relatorios');
+    expect(relatorios?.roles).toEqual(['administradora']);
+    expect(relatorios?.disabled).toBe(true);
+  });
+
   it('Disponibilidade é restrito ao profissional', () => {
     const disp = ALL_NAV_ITEMS.find(i => i.id === 'disponibilidade');
     expect(disp?.roles).toEqual(['profissional']);
@@ -151,8 +173,8 @@ describe('ALL_NAV_ITEMS', () => {
     });
   });
 
-  it('itens têm ordem: Agenda → Clientes → Serviços → Equipe → Bloqueios → Disponibilidade → Ausências', () => {
+  it('itens têm ordem com Financeiro e Relatórios antes de Disponibilidade/Ausências', () => {
     const ids = ALL_NAV_ITEMS.map(i => i.id);
-    expect(ids).toEqual(['agenda', 'clientes', 'servicos', 'profissionais', 'bloqueios', 'disponibilidade', 'ausencias']);
+    expect(ids).toEqual(['agenda', 'clientes', 'servicos', 'profissionais', 'bloqueios', 'financeiro', 'relatorios', 'disponibilidade', 'ausencias']);
   });
 });

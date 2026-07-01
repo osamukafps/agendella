@@ -4,22 +4,28 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import type { CollaboratorRole } from '../auth/auth.models';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
 import { ShellTopbarService } from './shell-topbar.service';
+import { AppIconComponent } from '../../shared/app-icon.component';
 
 export interface NavItem {
   id: string;
   label: string;
   route: string;
+  icon: string;
   roles: CollaboratorRole[];
+  disabled?: boolean;
+  badge?: string;
 }
 
 export const ALL_NAV_ITEMS: NavItem[] = [
-  { id: 'agenda',          label: 'Agenda',          route: '/agenda',                roles: ['administradora', 'profissional'] },
-  { id: 'clientes',        label: 'Clientes',        route: '/clientes',              roles: ['administradora', 'profissional'] },
-  { id: 'servicos',        label: 'Serviços',        route: '/servicos',              roles: ['administradora'] },
-  { id: 'profissionais',   label: 'Equipe',          route: '/profissionais',         roles: ['administradora'] },
-  { id: 'bloqueios',       label: 'Bloqueios',       route: '/bloqueios',             roles: ['administradora'] },
-  { id: 'disponibilidade', label: 'Disponível.',     route: '/minha-disponibilidade', roles: ['profissional'] },
-  { id: 'ausencias',       label: 'Ausências',       route: '/ausencias',             roles: ['administradora', 'profissional'] },
+  { id: 'agenda',          label: 'Agenda',          route: '/agenda',                icon: 'calendar-search', roles: ['administradora', 'profissional'] },
+  { id: 'clientes',        label: 'Clientes',        route: '/clientes',              icon: 'people', roles: ['administradora', 'profissional'] },
+  { id: 'servicos',        label: 'Serviços',        route: '/servicos',              icon: 'scissor-1', roles: ['administradora'] },
+  { id: 'profissionais',   label: 'Equipe',          route: '/profissionais',         icon: 'profile-2user', roles: ['administradora'] },
+  { id: 'bloqueios',       label: 'Bloqueios',       route: '/bloqueios',             icon: 'calendar-remove', roles: ['administradora'] },
+  { id: 'financeiro',      label: 'Financeiro',      route: '/financeiro',            icon: 'wallet-money', roles: ['administradora'], disabled: true, badge: 'Em breve' },
+  { id: 'relatorios',      label: 'Relatórios',      route: '/relatorios',            icon: 'information', roles: ['administradora'], disabled: true, badge: 'Em breve' },
+  { id: 'disponibilidade', label: 'Disponibilidade', route: '/minha-disponibilidade', icon: 'archive-tick', roles: ['profissional'] },
+  { id: 'ausencias',       label: 'Ausências',       route: '/ausencias',             icon: 'user-remove', roles: ['administradora', 'profissional'] },
 ];
 
 export function getNavItemsForRole(role: CollaboratorRole | null): NavItem[] {
@@ -30,7 +36,7 @@ export function getNavItemsForRole(role: CollaboratorRole | null): NavItem[] {
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ConfirmDialogComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ConfirmDialogComponent, AppIconComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.css',
   host: {
@@ -132,6 +138,10 @@ export class AppShellComponent implements OnDestroy {
 
   closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  handleDisabledNav(event: Event): void {
+    event.preventDefault();
   }
 
   toggleSidebar(): void {

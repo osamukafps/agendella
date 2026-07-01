@@ -7,6 +7,7 @@ import {
   loadCursorPage,
 } from '../../core/api/cursor-pagination';
 import type { ClientHistoryEventResponse, ClientHistoryEventType, ClientResponse } from '../../core/api/api.models';
+import { AppIconComponent } from '../../shared/app-icon.component';
 
 const EVENT_LABELS: Record<ClientHistoryEventType, string> = {
   AppointmentCreated: 'Agendamento criado',
@@ -22,7 +23,7 @@ const EVENT_LABELS: Record<ClientHistoryEventType, string> = {
 @Component({
   selector: 'app-client-history-page',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, AppIconComponent],
   templateUrl: './client-history-page.component.html',
   styleUrl: './clients-page.component.css',
 })

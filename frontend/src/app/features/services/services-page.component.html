@@ -1,7 +1,22 @@
 <div class="page-layout">
   <header class="page-header">
-    <h2 class="page-title">Serviços</h2>
-    <button class="btn-add" (click)="openCreate()" aria-label="Novo serviço">+ Novo</button>
+    <div class="page-header__content">
+      <p class="page-header__eyebrow">SERVIÇOS</p>
+      <div class="page-header__title-row">
+        <span class="page-header__icon" aria-hidden="true">
+          <app-icon name="scissor-1" [size]="22" />
+        </span>
+        <h2 class="page-title">Serviços</h2>
+      </div>
+      <p class="page-header__description">Defina nome, duração e preço dos serviços ativos do salão.</p>
+    </div>
+
+    <div class="page-header__actions">
+      <button class="btn-add" (click)="openCreate()" aria-label="Novo serviço">
+        <app-icon name="add-circle" [size]="18" />
+        Novo serviço
+      </button>
+    </div>
   </header>
 
   @if (pageError()) { <div class="state-error" role="alert">{{ pageError() }}</div> }
@@ -9,7 +24,7 @@
   @if (formMode()) {
     <app-modal-sheet
       [title]="formMode() === 'create' ? 'Novo serviço' : 'Editar serviço'"
-      description="Mantenha nome, duração, preço e moeda no mesmo fluxo visual dos demais cadastros."
+      description="Defina nome, duração e preço do serviço."
       [disableClose]="isSaving()"
       (closed)="closeForm()"
     >
@@ -21,11 +36,16 @@
         <section class="sheet-section sheet-section--highlight">
           <div class="sheet-section__header">
             <h4>Dados do serviço</h4>
-            <p>O cadastro continua usando os mesmos endpoints e contratos já existentes.</p>
+            <p>Preencha as informações básicas do serviço.</p>
           </div>
 
           <div class="field">
-            <label class="field-label" for="svc-name">Nome</label>
+            <label class="field-label" for="svc-name">
+              <span class="field-label__content">
+                <app-icon class="field-label__icon" name="scissor-1" [size]="16" />
+                Nome
+              </span>
+            </label>
             <input id="svc-name" class="field-input" type="text" required
               [value]="form().name"
               (input)="setField('name', $any($event.target).value)"
@@ -36,7 +56,12 @@
           </div>
 
           <div class="field">
-            <label class="field-label" for="svc-desc">Descrição</label>
+            <label class="field-label" for="svc-desc">
+              <span class="field-label__content">
+                <app-icon class="field-label__icon" name="information" [size]="16" />
+                Descrição
+              </span>
+            </label>
             <input id="svc-desc" class="field-input" type="text"
               [value]="form().description"
               (input)="setField('description', $any($event.target).value)"
@@ -48,38 +73,47 @@
 
           <div class="fields-row">
             <div class="field">
-              <label class="field-label" for="svc-dur">Duração (min)</label>
-              <input id="svc-dur" class="field-input" type="number" min="1" required inputmode="numeric"
-                [value]="form().durationMinutes"
-                (input)="setField('durationMinutes', +$any($event.target).value)"
-                [attr.aria-invalid]="fieldError('durationMinutes') ? 'true' : null">
+              <label class="field-label" for="svc-dur">
+                <span class="field-label__content">
+                  <app-icon class="field-label__icon" name="clock" [size]="16" />
+                  Duração (min)
+                </span>
+              </label>
+              <div class="field-input-group">
+                <span class="field-input-icon" aria-hidden="true">
+                  <app-icon name="clock" [size]="16" />
+                </span>
+                <input id="svc-dur" class="field-input" type="number" min="1" required inputmode="numeric"
+                  [value]="form().durationMinutes"
+                  (input)="setField('durationMinutes', +$any($event.target).value)"
+                  [attr.aria-invalid]="fieldError('durationMinutes') ? 'true' : null">
+              </div>
               @if (fieldError('durationMinutes')) {
                 <span class="field-error" role="alert">{{ fieldError('durationMinutes') }}</span>
               }
             </div>
 
             <div class="field">
-              <label class="field-label" for="svc-price">Preço</label>
-              <input id="svc-price" class="field-input" type="number" min="0" step="0.01" inputmode="decimal"
-                [value]="form().priceAmount"
-                (input)="setField('priceAmount', +$any($event.target).value)"
-                [attr.aria-invalid]="fieldError('priceAmount') ? 'true' : null">
+              <label class="field-label" for="svc-price">
+                <span class="field-label__content">
+                  <app-icon class="field-label__icon" name="dollar-circle" [size]="16" />
+                  Preço
+                </span>
+              </label>
+              <div class="field-input-group">
+                <span class="field-input-icon" aria-hidden="true">
+                  <app-icon name="dollar-circle" [size]="16" />
+                </span>
+                <input id="svc-price" class="field-input" type="text" inputmode="numeric"
+                  [value]="priceInput()"
+                  (input)="setPriceInput($any($event.target).value)"
+                  [attr.aria-invalid]="fieldError('priceAmount') ? 'true' : null">
+              </div>
               @if (fieldError('priceAmount')) {
                 <span class="field-error" role="alert">{{ fieldError('priceAmount') }}</span>
               }
+              <span class="field-hint">Os valores continuam sendo enviados em BRL para o sistema.</span>
             </div>
-          </div>
-
-          <div class="field">
-            <label class="field-label" for="svc-currency">Moeda</label>
-            <input id="svc-currency" class="field-input" type="text" maxlength="3" required
-              placeholder="BRL"
-              [value]="form().currency"
-              (input)="setField('currency', $any($event.target).value)"
-              [attr.aria-invalid]="fieldError('currency') ? 'true' : null">
-            @if (fieldError('currency')) {
-              <span class="field-error" role="alert">{{ fieldError('currency') }}</span>
-            }
           </div>
         </section>
       </form>
@@ -87,6 +121,7 @@
       <div sheet-footer class="form-actions">
         <button type="button" class="btn-ghost" (click)="closeForm()" [disabled]="isSaving()">Cancelar</button>
         <button type="submit" class="btn-primary" form="service-sheet-form" [disabled]="isSaving()">
+          <app-icon [name]="isSaving() ? 'loading' : 'check-tick'" [size]="16" [spin]="isSaving()" />
           {{ isSaving() ? 'Salvando…' : 'Salvar serviço' }}
         </button>
       </div>
@@ -108,13 +143,20 @@
         <li class="item-card" [class.item-card--inactive]="item.status === 'Inactive'">
           <div class="item-info">
             <span class="item-name">{{ item.name }}</span>
-            <span class="item-meta">{{ item.durationMinutes }} min · {{ formatPrice(item.priceAmount, item.currency) }} · {{ item.currency }}</span>
+            <span class="item-meta">
+              {{ formatDuration(item.durationMinutes) }} ·
+              <span class="item-meta--success">{{ formatPrice(item.priceAmount, item.currency) }}</span>
+            </span>
           </div>
           <div class="item-actions">
-            <button class="btn-icon" (click)="openEdit(item)" aria-label="Editar {{ item.name }}">✎</button>
+            <button class="btn-icon" (click)="openEdit(item)" aria-label="Editar {{ item.name }}">
+              <app-icon name="edit" [size]="16" />
+            </button>
             @if (item.status === 'Active') {
               <button class="btn-icon btn-icon--danger" (click)="deactivate(item)"
-                [attr.aria-label]="'Desativar ' + item.name">✕</button>
+                [attr.aria-label]="'Desativar ' + item.name">
+                <app-icon name="trash-square" [size]="16" />
+              </button>
             }
           </div>
         </li>
@@ -129,6 +171,7 @@
           <div class="state-error" role="alert">{{ loadMoreError() }}</div>
         }
         <button class="btn-secondary" type="button" (click)="loadMore()" [disabled]="isLoadingMore()">
+          <app-icon [name]="isLoadingMore() ? 'loading' : 'add-circle'" [size]="16" [spin]="isLoadingMore()" />
           {{ isLoadingMore() ? 'Carregando…' : 'Carregar mais' }}
         </button>
       </div>

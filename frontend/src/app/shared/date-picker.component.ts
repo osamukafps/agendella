@@ -13,6 +13,7 @@ import {
 import { NgStyle } from '@angular/common';
 import { formatDateForDisplay, getTodayIsoDate, isValidIsoDate } from '../core/utils/date-time';
 import { ModalSheetComponent } from './modal-sheet.component';
+import { AppIconComponent } from './app-icon.component';
 
 interface CalendarCell {
   isoDate: string;
@@ -36,7 +37,7 @@ function toIsoDate(date: Date): string {
 @Component({
   selector: 'app-date-picker',
   standalone: true,
-  imports: [ModalSheetComponent, NgStyle],
+  imports: [ModalSheetComponent, NgStyle, AppIconComponent],
   templateUrl: './date-picker.component.html',
   styleUrl: './date-picker.component.css',
 })

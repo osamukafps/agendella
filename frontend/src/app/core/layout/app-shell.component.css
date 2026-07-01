@@ -332,20 +332,15 @@
 }
 
 .bottom-nav {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
   border-top: 1px solid rgba(231, 229, 228, 0.9);
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(18px);
-  overflow-x: auto;
-  scrollbar-width: none;
   flex-shrink: 0;
-}
-
-.bottom-nav::-webkit-scrollbar {
-  display: none;
 }
 
 .nav-item {
@@ -357,13 +352,17 @@
   min-height: 56px;
   padding: var(--space-2) var(--space-3);
   border-radius: 18px;
+  border: 0;
+  background: transparent;
   color: var(--color-text-tertiary);
   transition: background-color 120ms ease, color 120ms ease;
+  text-decoration: none;
 }
 
 .bottom-nav .nav-item {
   flex-direction: column;
-  flex-shrink: 0;
+  min-width: 0;
+  height: 100%;
 }
 
 .nav-item--desktop {
@@ -381,6 +380,15 @@
   color: var(--color-primary);
 }
 
+.nav-item--disabled {
+  color: var(--color-neutral-400);
+  cursor: not-allowed;
+}
+
+.nav-item--disabled .nav-icon {
+  opacity: 0.72;
+}
+
 .nav-icon {
   width: 22px;
   height: 22px;
@@ -392,6 +400,29 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.1;
+  text-align: center;
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(124, 59, 80, 0.1);
+  color: var(--color-primary);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-badge--mobile {
+  min-height: 18px;
+  padding-inline: 6px;
+  margin-top: 2px;
+  font-size: 0.54rem;
 }
 
 @media (max-width: 767px) {
@@ -462,7 +493,7 @@
   }
 
   .main-content__inner {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    padding-bottom: calc(154px + env(safe-area-inset-bottom));
   }
 
   .bottom-nav {
@@ -470,12 +501,13 @@
     left: 0;
     right: 0;
     bottom: 0;
-    min-height: calc(64px + env(safe-area-inset-bottom));
+    min-height: calc(126px + env(safe-area-inset-bottom));
     z-index: var(--z-header);
   }
 
   .nav-item {
-    min-width: 68px;
+    min-width: 0;
+    min-height: 52px;
     padding-inline: var(--space-2);
   }
 
@@ -646,5 +678,9 @@
     width: 0;
     opacity: 0;
     pointer-events: none;
+  }
+
+  :host.shell--sidebar-collapsed .nav-badge {
+    display: none;
   }
 }

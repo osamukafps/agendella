@@ -71,6 +71,10 @@
   background: var(--color-error);
 }
 
+.confirm-dialog__confirm--default {
+  background: var(--color-success);
+}
+
 @media (min-width: 768px) {
   .confirm-dialog {
     align-items: center;

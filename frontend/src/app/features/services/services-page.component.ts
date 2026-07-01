@@ -10,16 +10,29 @@ import {
 import type { ServiceResponse, CreateServiceRequest } from '../../core/api/api.models';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { ModalSheetComponent } from '../../shared/modal-sheet.component';
+import { AppIconComponent } from '../../shared/app-icon.component';
 
 const EMPTY_FORM: CreateServiceRequest = {
   name: '', description: '', durationMinutes: 60, priceAmount: 0, currency: 'BRL',
 };
 const SERVICES_PAGE_SIZE = 20;
 
+function parseCurrencyInput(value: string): number {
+  const digits = value.replace(/\D/g, '');
+  return digits ? Number(digits) / 100 : 0;
+}
+
+function formatCurrencyInput(amount: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(Number.isFinite(amount) ? amount : 0);
+}
+
 @Component({
   selector: 'app-services-page',
   standalone: true,
-  imports: [ModalSheetComponent],
+  imports: [ModalSheetComponent, AppIconComponent],
   templateUrl: './services-page.component.html',
   styleUrl: './services-page.component.css',
 })
@@ -41,6 +54,7 @@ export class ServicesPageComponent implements OnInit {
   readonly formMode     = signal<'create' | 'edit' | null>(null);
   readonly editingId    = signal<string | null>(null);
   readonly form         = signal<CreateServiceRequest>({ ...EMPTY_FORM });
+  readonly priceInput   = signal(formatCurrencyInput(EMPTY_FORM.priceAmount));
   readonly fieldErrors  = signal<Record<string, string[]>>({});
 
   async ngOnInit(): Promise<void> { await this.load(); }
@@ -62,6 +76,7 @@ export class ServicesPageComponent implements OnInit {
 
   openCreate(): void {
     this.form.set({ ...EMPTY_FORM });
+    this.priceInput.set(formatCurrencyInput(EMPTY_FORM.priceAmount));
     this.editingId.set(null);
     this.formMode.set('create');
     this.formError.set(null);
@@ -74,6 +89,7 @@ export class ServicesPageComponent implements OnInit {
       durationMinutes: item.durationMinutes,
       priceAmount: item.priceAmount, currency: item.currency,
     });
+    this.priceInput.set(formatCurrencyInput(item.priceAmount));
     this.editingId.set(item.id);
     this.formMode.set('edit');
     this.formError.set(null);
@@ -87,13 +103,21 @@ export class ServicesPageComponent implements OnInit {
   }
 
   setField(key: keyof CreateServiceRequest, value: string | number): void {
-    const nextValue = key === 'currency' && typeof value === 'string'
-      ? value.toUpperCase()
-      : value;
-    this.form.update(f => ({ ...f, [key]: nextValue }));
+    this.form.update(f => ({ ...f, [key]: value }));
     this.fieldErrors.update(errors => {
       const next = { ...errors };
       delete next[key];
+      return next;
+    });
+  }
+
+  setPriceInput(value: string): void {
+    const amount = parseCurrencyInput(value);
+    this.priceInput.set(formatCurrencyInput(amount));
+    this.form.update(form => ({ ...form, priceAmount: amount, currency: 'BRL' }));
+    this.fieldErrors.update(errors => {
+      const next = { ...errors };
+      delete next['priceAmount'];
       return next;
     });
   }
@@ -104,11 +128,12 @@ export class ServicesPageComponent implements OnInit {
     this.isSaving.set(true);
     this.fieldErrors.set({});
     try {
+      const payload = { ...this.form(), currency: 'BRL' };
       if (this.formMode() === 'edit' && this.editingId()) {
-        const updated = await this.api.update(this.editingId()!, this.form());
+        const updated = await this.api.update(this.editingId()!, payload);
         this.items.update(items => items.map(i => i.id === updated.id ? updated : i));
       } else {
-        const created = await this.api.create(this.form());
+        const created = await this.api.create(payload);
         this.items.update(items => [created, ...items]);
       }
       this.closeForm();
@@ -152,5 +177,9 @@ export class ServicesPageComponent implements OnInit {
 
   formatPrice(amount: number, currency: string): string {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount);
+  }
+
+  formatDuration(durationMinutes: number): string {
+    return `${durationMinutes} min`;
   }
 }

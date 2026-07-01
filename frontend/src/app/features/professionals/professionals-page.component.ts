@@ -21,6 +21,7 @@ import { getEmailValidationMessage, normalizeEmail } from '../../core/utils/emai
 import type { ProfessionalResponse, CreateProfessionalRequest } from '../../core/api/api.models';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { ModalSheetComponent } from '../../shared/modal-sheet.component';
+import { AppIconComponent } from '../../shared/app-icon.component';
 
 const EMPTY_FORM: CreateProfessionalRequest = { name: '', phone: '', email: '' };
 const PROFESSIONALS_PAGE_SIZE = 20;
@@ -28,7 +29,7 @@ const PROFESSIONALS_PAGE_SIZE = 20;
 @Component({
   selector: 'app-professionals-page',
   standalone: true,
-  imports: [WeeklyAvailabilityEditorComponent, ModalSheetComponent],
+  imports: [WeeklyAvailabilityEditorComponent, ModalSheetComponent, AppIconComponent],
   templateUrl: './professionals-page.component.html',
   styleUrl: './professionals-page.component.css',
 })

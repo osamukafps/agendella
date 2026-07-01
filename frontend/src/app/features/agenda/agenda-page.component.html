@@ -26,21 +26,23 @@
         </div>
 
         <div class="agenda-period-nav" aria-label="Navegação de período">
-          <button type="button" class="agenda-period-nav__button" (click)="goToPreviousPeriod()">
-            Anterior
+          <button type="button" class="agenda-period-nav__button" (click)="goToPreviousPeriod()" aria-label="Período anterior">
+            <app-icon name="arrow-circle-left" [size]="18" />
           </button>
           <span class="agenda-period-nav__label">{{ currentPeriodLabel() }}</span>
-          <button type="button" class="agenda-period-nav__button" (click)="goToNextPeriod()">
-            Próximo
+          <button type="button" class="agenda-period-nav__button" (click)="goToNextPeriod()" aria-label="Próximo período">
+            <app-icon name="arrow-circle-right" [size]="18" />
           </button>
         </div>
       </div>
     </header>
 
     <ul class="status-legend" aria-label="Legenda de status">
-      @for (status of statusLegend; track status.id) {
-        <li>
-          <span class="status-legend__dot" [style.--legend-color]="status.color"></span>
+      @for (status of statusLegend; track status.key) {
+        <li [style.--legend-color]="status.accentColor" [style.--legend-bg]="status.chipBackground">
+          <span class="status-legend__icon">
+            <app-icon [name]="status.icon" [size]="14" />
+          </span>
           <span>{{ status.label }}</span>
         </li>
       }
@@ -79,13 +81,18 @@
               class="agenda-item"
               [class.agenda-item--interactive]="hasAppointmentActions(appointment)"
               [class]="'agenda-item--' + getStatusTone(appointment)"
+              [style.--agenda-accent]="getStatusVisual(appointment).accentColor"
+              [style.--agenda-border]="getStatusVisual(appointment).cardBorder"
+              [style.--agenda-surface]="getStatusVisual(appointment).cardSurface"
+              [style.--agenda-chip-bg]="getStatusVisual(appointment).chipBackground"
+              [style.--agenda-chip-fg]="getStatusVisual(appointment).chipColor"
               role="listitem"
             >
               <span class="agenda-item__accent" aria-hidden="true"></span>
 
               <div class="agenda-item__body">
                 <div class="agenda-item__time">
-                  <span class="agenda-item__time-icon" aria-hidden="true"></span>
+                  <app-icon class="agenda-item__time-icon" name="clock" [size]="14" />
                   <span class="agenda-item__time-label">{{ appointment.startTimeLabel }}</span>
                 </div>
 
@@ -109,6 +116,7 @@
 
               <div class="agenda-item__side">
                 <span class="agenda-status-chip" [class]="getStatusBadgeClass(appointment)">
+                  <app-icon [name]="getStatusIcon(appointment)" [size]="14" />
                   {{ appointment.statusLabel }}
                 </span>
 
@@ -119,6 +127,7 @@
                     [attr.aria-label]="'Abrir ações para ' + appointment.clientName + ' às ' + appointment.startTimeLabel"
                     (click)="openAppointmentActions(appointment)"
                   >
+                    <app-icon name="edit" [size]="14" />
                     Ações
                   </button>
                 }
@@ -141,13 +150,18 @@
                     class="agenda-item"
                     [class.agenda-item--interactive]="hasAppointmentActions(appointment)"
                     [class]="'agenda-item--' + getStatusTone(appointment)"
+                    [style.--agenda-accent]="getStatusVisual(appointment).accentColor"
+                    [style.--agenda-border]="getStatusVisual(appointment).cardBorder"
+                    [style.--agenda-surface]="getStatusVisual(appointment).cardSurface"
+                    [style.--agenda-chip-bg]="getStatusVisual(appointment).chipBackground"
+                    [style.--agenda-chip-fg]="getStatusVisual(appointment).chipColor"
                     role="listitem"
                   >
                     <span class="agenda-item__accent" aria-hidden="true"></span>
 
                     <div class="agenda-item__body">
                       <div class="agenda-item__time">
-                        <span class="agenda-item__time-icon" aria-hidden="true"></span>
+                        <app-icon class="agenda-item__time-icon" name="clock" [size]="14" />
                         <span class="agenda-item__time-label">{{ appointment.startTimeLabel }}</span>
                       </div>
 
@@ -171,6 +185,7 @@
 
                     <div class="agenda-item__side">
                       <span class="agenda-status-chip" [class]="getStatusBadgeClass(appointment)">
+                        <app-icon [name]="getStatusIcon(appointment)" [size]="14" />
                         {{ appointment.statusLabel }}
                       </span>
 
@@ -181,6 +196,7 @@
                           [attr.aria-label]="'Abrir ações para ' + appointment.clientName + ' às ' + appointment.startTimeLabel"
                           (click)="openAppointmentActions(appointment)"
                         >
+                          <app-icon name="edit" [size]="14" />
                           Ações
                         </button>
                       }
@@ -202,9 +218,33 @@
       (click)="openCreateSheet()"
       aria-label="Criar novo agendamento"
     >
+      <app-icon name="calendar-add" [size]="18" />
       Novo agendamento
     </button>
   }
+
+  <aside class="agenda-insights" aria-labelledby="agenda-indicators-title">
+    <div class="agenda-insights__panel">
+      <div class="agenda-insights__header">
+        <p class="agenda-insights__eyebrow">RESUMO</p>
+        <h3 id="agenda-indicators-title">Indicadores do mês</h3>
+        <p>{{ monthLabel() }}</p>
+      </div>
+
+      <div class="agenda-insights__grid">
+        @for (indicator of monthIndicators(); track indicator.id) {
+          <article class="indicator-card" [class]="'indicator-card--' + indicator.tone">
+            <span class="indicator-card__icon" aria-hidden="true">
+              <app-icon [name]="indicator.icon" [size]="18" />
+            </span>
+            <span class="indicator-card__label">{{ indicator.label }}</span>
+            <strong class="indicator-card__value">{{ indicator.value }}</strong>
+            <span class="indicator-card__helper">{{ indicator.helper }}</span>
+          </article>
+        }
+      </div>
+    </div>
+  </aside>
 
   @if (hasOpenSheet()) {
     <div class="agenda-sheet-backdrop" (click)="closeActiveSheet()" aria-hidden="true"></div>
@@ -240,7 +280,7 @@
             aria-label="Fechar ações"
             (click)="closeActionSheet()"
           >
-            Fechar
+            <span aria-hidden="true">&times;</span>
           </button>
         </div>
 
@@ -279,6 +319,7 @@
             aria-label="Voltar para as ações"
             (click)="cancelActionConfirmation()"
           >
+            <app-icon name="arrow-circle-left" [size]="16" />
             Voltar
           </button>
         </div>
@@ -296,6 +337,7 @@
 
         <div class="agenda-sheet-panel__actions">
           <button type="button" class="agenda-inline-button" (click)="cancelActionConfirmation()">
+            <app-icon name="arrow-circle-left" [size]="16" />
             Voltar
           </button>
           <button
@@ -309,6 +351,7 @@
             [attr.aria-busy]="pendingAction() !== null"
             (click)="confirmAppointmentAction()"
           >
+            <app-icon [name]="pendingAction() ? 'loading' : 'check-tick'" [size]="16" [spin]="pendingAction() !== null" />
             {{ pendingAction() ? 'Salvando…' : actionConfirmation()!.confirmLabel }}
           </button>
         </div>

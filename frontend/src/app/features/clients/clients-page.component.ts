@@ -21,6 +21,7 @@ import { getEmailValidationMessage, normalizeEmail } from '../../core/utils/emai
 import type { ClientResponse, CreateClientRequest } from '../../core/api/api.models';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { ModalSheetComponent } from '../../shared/modal-sheet.component';
+import { AppIconComponent } from '../../shared/app-icon.component';
 
 const EMPTY_FORM: CreateClientRequest = { name: '', phone: '', email: '', notes: '' };
 const CLIENTS_PAGE_SIZE = 20;
@@ -28,7 +29,7 @@ const CLIENTS_PAGE_SIZE = 20;
 @Component({
   selector: 'app-clients-page',
   standalone: true,
-  imports: [RouterLink, ModalSheetComponent],
+  imports: [RouterLink, ModalSheetComponent, AppIconComponent],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.css',
 })

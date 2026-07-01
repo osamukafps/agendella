@@ -36,6 +36,8 @@
   color: var(--color-text-secondary);
   cursor: pointer;
   flex-shrink: 0;
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .appointment-form__body {
@@ -57,6 +59,19 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.selection-section__intro {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.selection-section__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-primary);
 }
 
 .selection-section__header h4 {
@@ -89,6 +104,12 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
+}
+
+.selection-section__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .selection-section--summary {
@@ -166,6 +187,12 @@
   align-items: center;
 }
 
+.option-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .option-card__description {
   color: var(--color-text-tertiary);
 }
@@ -185,6 +212,12 @@
   text-align: center;
 }
 
+.option-empty--with-icon {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+}
+
 .selection-actions {
   display: flex;
   flex-wrap: wrap;
@@ -200,9 +233,16 @@
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
 }
 
-.service-price {
+.service-price,
+.option-card .service-price,
+.selection-section__meta .service-price,
+.selection-section__meta--service .service-price {
   color: var(--color-success);
   font-weight: 700;
 }
@@ -256,6 +296,9 @@
   color: var(--color-primary);
   font-size: var(--text-sm);
   text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 @media (max-width: 767px) {

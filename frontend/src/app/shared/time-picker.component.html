@@ -12,7 +12,9 @@
     (click)="toggleOpen()"
   >
     <span>{{ displayValue() }}</span>
-    <span class="picker-trigger__icon" aria-hidden="true">▾</span>
+    <span class="picker-trigger__icon" aria-hidden="true">
+      <app-icon name="arrow-circle-right" [size]="14" />
+    </span>
   </button>
 
   @if (isOpen() && !isMobile()) {

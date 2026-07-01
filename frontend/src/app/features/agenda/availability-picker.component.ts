@@ -4,6 +4,7 @@ import { formatLocalTime, formatSlotTime, getWeekDays, parseApiDate, toApiDate }
 import { getApiErrorMessage } from '../../core/api/api-error.utils';
 import type { AvailabilitySlotDto } from '../../core/api/api.models';
 import type { WeekDay } from './agenda-utils';
+import { AppIconComponent } from '../../shared/app-icon.component';
 
 interface AvailabilityOptionViewModel {
   slot: AvailabilitySlotDto;
@@ -15,15 +16,16 @@ interface AvailabilityOptionViewModel {
 @Component({
   selector: 'app-availability-picker',
   standalone: true,
+  imports: [AppIconComponent],
   template: `
     <div class="picker">
       <div class="picker-week-header">
-        <button type="button" class="picker-week-nav" (click)="goToPreviousWeek()">
-          Semana anterior
+        <button type="button" class="picker-week-nav" (click)="goToPreviousWeek()" aria-label="Semana anterior">
+          <app-icon name="arrow-circle-left" [size]="18" />
         </button>
         <span>{{ weekRangeLabel() }}</span>
-        <button type="button" class="picker-week-nav" (click)="goToNextWeek()">
-          Próxima semana
+        <button type="button" class="picker-week-nav" (click)="goToNextWeek()" aria-label="Próxima semana">
+          <app-icon name="arrow-circle-right" [size]="18" />
         </button>
       </div>
 
@@ -54,16 +56,20 @@ interface AvailabilityOptionViewModel {
         </div>
       } @else if (slots().length === 0 && selectedDate()) {
         <div class="picker-empty">
+          <app-icon name="information" [size]="16" />
           Nenhum horário disponível para este dia.
         </div>
       } @else {
         <div class="slots-panel">
           <div class="slots-panel__header">
             <div>
-              <strong>Horários disponíveis</strong>
+              <strong>
+                <app-icon name="clock" [size]="16" />
+                Horários disponíveis
+              </strong>
               <span>Escolha o início do atendimento. O fim sugerido aparece no formulário.</span>
             </div>
-            <span>{{ slotOptions().length }} opção{{ slotOptions().length === 1 ? '' : 'ões' }}</span>
+            <span>{{ slotOptions().length }} {{ slotOptions().length === 1 ? 'opção' : 'opções' }}</span>
           </div>
 
           <div class="slots-list" role="listbox" [attr.aria-label]="'Horários disponíveis para ' + selectedDate()">
@@ -100,13 +106,17 @@ interface AvailabilityOptionViewModel {
       font-weight: 600;
     }
     .picker-week-nav {
-      min-height: 36px;
-      padding: 0 var(--space-3);
+      min-width: 40px;
+      min-height: 40px;
+      padding: 0;
       border: 1px solid var(--color-border);
       border-radius: 999px;
       background: var(--color-surface);
       color: var(--color-text-primary);
       font-size: var(--text-xs);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .week-strip {
       display: grid;
@@ -123,7 +133,7 @@ interface AvailabilityOptionViewModel {
     .week-day--today:not(.week-day--active) { border-color: var(--color-primary); }
     .day-abbr { font-size: var(--text-xs); font-weight: 500; letter-spacing: 0.05em; }
     .day-num  { font-size: var(--text-base); font-weight: 700; }
-    .picker-loading, .picker-empty { color: var(--color-text-tertiary); font-size: var(--text-sm); text-align: center; padding: var(--space-6) 0; }
+    .picker-loading, .picker-empty { color: var(--color-text-tertiary); font-size: var(--text-sm); text-align: center; padding: var(--space-6) 0; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
     .picker-conflict {
       display: grid;
       gap: var(--space-2);
@@ -164,6 +174,9 @@ interface AvailabilityOptionViewModel {
     .slots-panel__header strong {
       color: var(--color-text-primary);
       font-size: var(--text-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .slots-list {
       display: grid;

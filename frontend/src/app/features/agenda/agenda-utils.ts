@@ -95,32 +95,109 @@ export const STATUS_LABELS: Record<AppointmentStatus, string> = {
   NoShow: 'Não compareceu',
 };
 
+export type AgendaStatusVisualKey = 'scheduled' | 'completed' | 'cancelled' | 'noshow' | 'review';
+
+export interface AgendaStatusVisual {
+  key: AgendaStatusVisualKey;
+  label: string;
+  icon: string;
+  accentColor: string;
+  chipBackground: string;
+  chipColor: string;
+  cardBorder: string;
+  cardSurface: string;
+}
+
+export const AGENDA_STATUS_VISUALS: Record<AgendaStatusVisualKey, AgendaStatusVisual> = {
+  scheduled: {
+    key: 'scheduled',
+    label: 'Agendado',
+    icon: 'archive-tick',
+    accentColor: 'var(--color-primary)',
+    chipBackground: 'var(--color-primary-subtle)',
+    chipColor: 'var(--color-primary)',
+    cardBorder: 'rgba(124, 59, 80, 0.14)',
+    cardSurface: 'rgba(255, 252, 251, 0.95)',
+  },
+  completed: {
+    key: 'completed',
+    label: 'Concluído',
+    icon: 'check-tick',
+    accentColor: 'var(--color-success)',
+    chipBackground: 'var(--color-success-subtle)',
+    chipColor: 'var(--color-success)',
+    cardBorder: 'rgba(61, 122, 90, 0.18)',
+    cardSurface: 'rgba(248, 253, 249, 0.96)',
+  },
+  cancelled: {
+    key: 'cancelled',
+    label: 'Cancelado',
+    icon: 'archive-minus',
+    accentColor: 'var(--color-error)',
+    chipBackground: 'var(--color-error-subtle)',
+    chipColor: 'var(--color-error)',
+    cardBorder: 'rgba(168, 55, 42, 0.18)',
+    cardSurface: 'rgba(255, 250, 249, 0.96)',
+  },
+  noshow: {
+    key: 'noshow',
+    label: 'Não compareceu',
+    icon: 'user-remove',
+    accentColor: 'var(--color-error)',
+    chipBackground: 'var(--color-error-subtle)',
+    chipColor: 'var(--color-error)',
+    cardBorder: 'rgba(168, 55, 42, 0.18)',
+    cardSurface: 'rgba(255, 250, 249, 0.96)',
+  },
+  review: {
+    key: 'review',
+    label: 'Requer revisão',
+    icon: 'danger',
+    accentColor: 'var(--color-warning)',
+    chipBackground: 'var(--color-warning-subtle)',
+    chipColor: 'var(--color-warning)',
+    cardBorder: 'rgba(192, 122, 36, 0.18)',
+    cardSurface: 'rgba(255, 252, 247, 0.96)',
+  },
+};
+
 export function getStatusLabel(status: AppointmentStatus): string {
   return STATUS_LABELS[status] ?? status;
 }
 
+export function getAgendaStatusVisualKey(
+  status: AppointmentStatus,
+  requiresReview: boolean,
+): AgendaStatusVisualKey {
+  if (requiresReview) {
+    return 'review';
+  }
+
+  switch (status) {
+    case 'Completed':
+      return 'completed';
+    case 'Cancelled':
+      return 'cancelled';
+    case 'NoShow':
+      return 'noshow';
+    default:
+      return 'scheduled';
+  }
+}
+
+export function getAgendaStatusVisual(
+  status: AppointmentStatus,
+  requiresReview: boolean,
+): AgendaStatusVisual {
+  return AGENDA_STATUS_VISUALS[getAgendaStatusVisualKey(status, requiresReview)];
+}
+
 export function getStatusBadgeClass(status: AppointmentStatus, requiresReview: boolean): string {
-  if (requiresReview) return 'badge-review';
-  const map: Record<AppointmentStatus, string> = {
-    Scheduled: 'badge-scheduled',
-    Cancelled: 'badge-cancelled',
-    Completed: 'badge-completed',
-    NoShow: 'badge-noshow',
-  };
-  return map[status] ?? 'badge-default';
+  return `badge-${getAgendaStatusVisualKey(status, requiresReview)}`;
 }
 
 export function getStatusCardClass(status: AppointmentStatus, requiresReview: boolean): string {
-  if (requiresReview) return 'appt-card--review';
-
-  const map: Record<AppointmentStatus, string> = {
-    Scheduled: 'appt-card--scheduled',
-    Cancelled: 'appt-card--cancelled',
-    Completed: 'appt-card--completed',
-    NoShow: 'appt-card--noshow',
-  };
-
-  return map[status] ?? 'appt-card--scheduled';
+  return `appt-card--${getAgendaStatusVisualKey(status, requiresReview)}`;
 }
 
 // ─── Regras de ação por status ────────────────────────────────────────────────

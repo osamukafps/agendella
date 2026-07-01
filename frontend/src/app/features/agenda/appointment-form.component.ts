@@ -9,6 +9,7 @@ import { conflictTypeLabel, formatDuration, formatDurationMinutes, getDurationMi
 import { getApiErrorMessage, mapApiErrorToUi } from '../../core/api/api-error.utils';
 import { isValidTimeValue, localDateTimeToUtc, utcToLocalDateTimeParts } from '../../core/utils/date-time';
 import { TimePickerComponent } from '../../shared/time-picker.component';
+import { AppIconComponent } from '../../shared/app-icon.component';
 import type {
   AppointmentResponse,
   AvailabilitySlotDto,
@@ -154,7 +155,7 @@ export function resolveManualEndSelection(
 @Component({
   selector: 'app-appointment-form',
   standalone: true,
-  imports: [AvailabilityPickerComponent, ClientQuickFormComponent, TimePickerComponent],
+  imports: [AvailabilityPickerComponent, ClientQuickFormComponent, TimePickerComponent, AppIconComponent],
   templateUrl: './appointment-form.component.html',
   styleUrl: './appointment-form.component.css',
 })

@@ -10,7 +10,10 @@ import { AppointmentActionsComponent } from './appointment-actions.component';
 import { ShellTopbarService } from '../../core/layout/shell-topbar.service';
 import { getApiErrorMessage } from '../../core/api/api-error.utils';
 import { collectCursorPages } from '../../core/api/cursor-pagination';
+import { AppIconComponent } from '../../shared/app-icon.component';
 import {
+  AGENDA_STATUS_VISUALS,
+  getAgendaStatusVisual,
   DEFAULT_TIMELINE_START_MINUTES,
   buildAgendaAppointments,
   buildAgendaLookupMaps,
@@ -62,6 +65,15 @@ interface AgendaAppointmentGroup {
   items: AgendaAppointmentViewModel[];
 }
 
+interface AgendaIndicatorCard {
+  id: string;
+  label: string;
+  value: string;
+  helper: string;
+  icon: string;
+  tone: 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
+}
+
 function lastLocalAppointmentDate(appointments: AppointmentResponse[]): string | null {
   const last = appointments[appointments.length - 1];
   return last ? toApiDate(new Date(last.startAtUtc)) : null;
@@ -94,6 +106,14 @@ function shiftApiMonth(dateStr: string, months: number): string {
   return toApiDate(date);
 }
 
+function formatCompactCurrency(amount: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 function buildActionConfirmationCopy(
   action: AppointmentMutationAction,
   appointment: AgendaAppointmentViewModel,
@@ -112,7 +132,7 @@ function buildActionConfirmationCopy(
         title: 'Marcar como não compareceu',
         description: `Confirme que ${appointment.clientName} não compareceu ao horário ${appointment.timeRangeLabel}.`,
         confirmLabel: 'Confirmar no-show',
-        tone: 'warning',
+        tone: 'danger',
         fallbackError: 'Não foi possível marcar o não comparecimento.',
       };
     case 'cancel':
@@ -137,7 +157,7 @@ function buildActionConfirmationCopy(
 @Component({
   selector: 'app-agenda-page',
   standalone: true,
-  imports: [AppointmentFormComponent, AppointmentActionsComponent],
+  imports: [AppointmentFormComponent, AppointmentActionsComponent, AppIconComponent],
   templateUrl: './agenda-page.component.html',
   styleUrl: './agenda-page.component.scss',
 })
@@ -180,11 +200,11 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     { id: 'month', label: 'Mês' },
   ];
   protected readonly statusLegend = [
-    { id: 'scheduled', label: 'Agendado', color: 'var(--color-primary)' },
-    { id: 'completed', label: 'Concluído', color: 'var(--color-neutral-400)' },
-    { id: 'cancelled', label: 'Cancelado', color: 'var(--color-error)' },
-    { id: 'no-show', label: 'Não compareceu', color: 'var(--color-error)' },
-    { id: 'review', label: 'Requer revisão', color: 'var(--color-warning)' },
+    AGENDA_STATUS_VISUALS.scheduled,
+    AGENDA_STATUS_VISUALS.completed,
+    AGENDA_STATUS_VISUALS.cancelled,
+    AGENDA_STATUS_VISUALS.noshow,
+    AGENDA_STATUS_VISUALS.review,
   ];
 
   protected readonly isMineUnavailable = computed(() =>
@@ -285,6 +305,121 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     });
   });
 
+  protected readonly monthAppointments = computed(() => {
+    const monthStart = startOfMonthApiDate(this.selectedDate());
+    const monthEnd = endOfMonthApiDate(this.selectedDate());
+
+    return this.agendaItems().filter(item => {
+      const itemDate = toApiDate(new Date(item.startAtUtc));
+      return itemDate >= monthStart && itemDate <= monthEnd;
+    });
+  });
+
+  protected readonly monthIndicators = computed<AgendaIndicatorCard[]>(() => {
+    const monthAppointments = this.monthAppointments();
+    const scheduled = monthAppointments.filter(item => item.appointment.status === 'Scheduled').length;
+    const completed = monthAppointments.filter(item => item.appointment.status === 'Completed').length;
+    const cancelled = monthAppointments.filter(item => item.appointment.status === 'Cancelled').length;
+    const noShow = monthAppointments.filter(item => item.appointment.status === 'NoShow').length;
+    const review = monthAppointments.filter(item => item.appointment.requiresReview).length;
+
+    const cards: AgendaIndicatorCard[] = [
+      {
+        id: 'appointments',
+        label: 'Atendimentos do mês',
+        value: String(monthAppointments.length),
+        helper: 'Agendamentos visíveis no período',
+        icon: 'calendar-search',
+        tone: 'primary',
+      },
+      {
+        id: 'scheduled',
+        label: 'Agendados',
+        value: String(scheduled),
+        helper: 'Compromissos ainda abertos',
+        icon: 'archive-tick',
+        tone: 'primary',
+      },
+      {
+        id: 'completed',
+        label: 'Concluídos',
+        value: String(completed),
+        helper: 'Atendimentos finalizados',
+        icon: 'check-tick',
+        tone: 'success',
+      },
+      {
+        id: 'cancelled',
+        label: 'Cancelados',
+        value: String(cancelled),
+        helper: 'Compromissos cancelados no mês',
+        icon: 'archive-minus',
+        tone: 'danger',
+      },
+      {
+        id: 'no-show',
+        label: 'Não compareceu',
+        value: String(noShow),
+        helper: 'Ausências registradas',
+        icon: 'user-remove',
+        tone: 'warning',
+      },
+      {
+        id: 'review',
+        label: 'Requer revisão',
+        value: String(review),
+        helper: 'Agendamentos que pedem atenção',
+        icon: 'danger',
+        tone: 'warning',
+      },
+    ];
+
+    const billableAppointments = monthAppointments.filter(item =>
+      item.appointment.status === 'Scheduled' || item.appointment.status === 'Completed'
+    );
+    const pricedServices = billableAppointments
+      .map(item => this.servicesCatalog().find(service => service.id === item.appointment.serviceId))
+      .filter((service): service is ServiceResponse => !!service);
+
+    if (billableAppointments.length > 0 && pricedServices.length === billableAppointments.length) {
+      const estimatedRevenue = pricedServices.reduce((total, service) => total + service.priceAmount, 0);
+      cards.push({
+        id: 'revenue',
+        label: 'Faturamento estimado',
+        value: formatCompactCurrency(estimatedRevenue),
+        helper: 'Soma dos serviços agendados e concluídos',
+        icon: 'wallet-money',
+        tone: 'success',
+      });
+    }
+
+    const loyaltyMap = new Map<string, { name: string; total: number }>();
+    monthAppointments.forEach(item => {
+      const current = loyaltyMap.get(item.appointment.clientId);
+      loyaltyMap.set(item.appointment.clientId, {
+        name: item.clientName,
+        total: (current?.total ?? 0) + 1,
+      });
+    });
+
+    const rankedClients = [...loyaltyMap.values()].sort((left, right) => right.total - left.total);
+    const topClient = rankedClients[0];
+    const secondClient = rankedClients[1];
+
+    if (topClient && (!secondClient || topClient.total > secondClient.total)) {
+      cards.push({
+        id: 'loyal-client',
+        label: 'Cliente mais fiel',
+        value: topClient.name,
+        helper: `${topClient.total} atendimento${topClient.total === 1 ? '' : 's'} no mês`,
+        icon: 'crown',
+        tone: 'neutral',
+      });
+    }
+
+    return cards;
+  });
+
   protected readonly currentViewGroups = computed<AgendaAppointmentGroup[]>(() => {
     if (this.viewMode() === 'day') {
       return [];
@@ -350,6 +485,8 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     }
   });
 
+  protected readonly monthLabel = computed(() => formatMonthLabel(this.selectedDate()));
+
   protected readonly emptyStateTitle = computed(() => {
     switch (this.viewMode()) {
       case 'day':
@@ -394,6 +531,7 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     this.shellTopbar.setAction({
       label: 'Novo agendamento',
       ariaLabel: 'Criar novo agendamento',
+      icon: 'calendar-add',
       onClick: () => this.openCreateSheet(),
     });
   }
@@ -611,21 +749,19 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
     );
   }
 
-  protected getStatusTone(appointment: AgendaAppointmentViewModel): string {
-    if (appointment.appointment.requiresReview) {
-      return 'review';
-    }
+  protected getStatusVisual(appointment: AgendaAppointmentViewModel) {
+    return getAgendaStatusVisual(
+      appointment.appointment.status,
+      appointment.appointment.requiresReview,
+    );
+  }
 
-    switch (appointment.appointment.status) {
-      case 'Completed':
-        return 'completed';
-      case 'Cancelled':
-        return 'cancelled';
-      case 'NoShow':
-        return 'noshow';
-      default:
-        return 'scheduled';
-    }
+  protected getStatusIcon(appointment: AgendaAppointmentViewModel): string {
+    return this.getStatusVisual(appointment).icon;
+  }
+
+  protected getStatusTone(appointment: AgendaAppointmentViewModel): string {
+    return this.getStatusVisual(appointment).key;
   }
 
   protected getClientInitials(name: string): string {

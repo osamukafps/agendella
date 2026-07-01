@@ -18,11 +18,12 @@ import {
   isValidTimeValue,
 } from '../core/utils/date-time';
 import { ModalSheetComponent } from './modal-sheet.component';
+import { AppIconComponent } from './app-icon.component';
 
 @Component({
   selector: 'app-time-picker',
   standalone: true,
-  imports: [ModalSheetComponent, NgStyle],
+  imports: [ModalSheetComponent, NgStyle, AppIconComponent],
   templateUrl: './time-picker.component.html',
   styleUrl: './time-picker.component.css',
 })

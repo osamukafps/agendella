@@ -18,13 +18,14 @@ import { ModalSheetComponent } from '../../shared/modal-sheet.component';
 import { DatePickerComponent } from '../../shared/date-picker.component';
 import { TimePickerComponent } from '../../shared/time-picker.component';
 import { localDateTimeToUtc } from '../../core/utils/date-time';
+import { AppIconComponent } from '../../shared/app-icon.component';
 
 const PROFESSIONALS_PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-professional-absences-page',
   standalone: true,
-  imports: [ModalSheetComponent, DatePickerComponent, TimePickerComponent],
+  imports: [ModalSheetComponent, DatePickerComponent, TimePickerComponent, AppIconComponent],
   templateUrl: './professional-absences-page.component.html',
   styleUrl: './professional-absences-page.component.css',
 })

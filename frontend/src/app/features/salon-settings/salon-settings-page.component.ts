@@ -3,6 +3,15 @@ import { SalonSettingsApiService } from './salon-settings-api.service';
 import { mapApiErrorToUi } from '../../core/api/api-error.utils';
 import type { SalonSettingsResponse, BusinessHourDto } from '../../core/api/api.models';
 import { TimePickerComponent } from '../../shared/time-picker.component';
+import { AppIconComponent } from '../../shared/app-icon.component';
+import {
+  applyPhoneMask,
+  digitsOnly,
+  getPhoneValidationMessage,
+  PHONE_MASK_MAX_LENGTH,
+  shouldBlockPhoneBeforeInput,
+  shouldBlockPhoneKey,
+} from '../../core/utils/phone';
 
 export const DAYS_PT: Record<string, string> = {
   Monday: 'Segunda', Tuesday: 'Terça', Wednesday: 'Quarta',
@@ -37,7 +46,7 @@ export function sortBusinessHours(hours: BusinessHourDto[]): BusinessHourDto[] {
 @Component({
   selector: 'app-salon-settings-page',
   standalone: true,
-  imports: [TimePickerComponent],
+  imports: [TimePickerComponent, AppIconComponent],
   templateUrl: './salon-settings-page.component.html',
   styleUrl: './salon-settings-page.component.css',
 })
@@ -56,6 +65,8 @@ export class SalonSettingsPageComponent implements OnInit {
   readonly settingsFieldErrors = signal<Record<string, string[]>>({});
   readonly hoursFieldErrors = signal<Record<string, string[]>>({});
   readonly hasPersistedBusinessHours = signal(false);
+  readonly settingsPhoneError = signal<string | null>(null);
+  readonly phoneMaxLength = PHONE_MASK_MAX_LENGTH;
 
   // Form state — settings
   readonly formName        = signal('');
@@ -82,7 +93,7 @@ export class SalonSettingsPageComponent implements OnInit {
       this.hours.set(h.length > 0 ? sortBusinessHours(h) : defaultBusinessHours());
       this.formName.set(s.name);
       this.formAddress.set(s.address);
-      this.formPhone.set(s.phone);
+      this.formPhone.set(applyPhoneMask(s.phone));
       this.formTimezone.set(s.timeZoneId);
       this.formMinCancel.set(s.minimumCancellationNoticeMinutes);
     } catch (error) {
@@ -96,6 +107,11 @@ export class SalonSettingsPageComponent implements OnInit {
 
   async saveSettings(event: Event): Promise<void> {
     event.preventDefault();
+    this.validatePhoneField();
+    if (this.settingsPhoneError()) {
+      return;
+    }
+
     this.isSavingSettings.set(true);
     this.settingsError.set(null);
     this.settingsSaveOk.set(false);
@@ -104,11 +120,12 @@ export class SalonSettingsPageComponent implements OnInit {
       const updated = await this.api.updateSettings({
         name: this.formName(),
         address: this.formAddress(),
-        phone: this.formPhone(),
+        phone: digitsOnly(this.formPhone()),
         timeZoneId: this.formTimezone(),
         minimumCancellationNoticeMinutes: this.formMinCancel(),
       });
       this.settings.set(updated);
+      this.formPhone.set(applyPhoneMask(updated.phone));
       this.settingsSaveOk.set(true);
     } catch (error) {
       const uiError = mapApiErrorToUi(error, 'Erro ao salvar configurações.');
@@ -165,6 +182,27 @@ export class SalonSettingsPageComponent implements OnInit {
 
   settingsFieldError(field: string): string | null {
     return this.settingsFieldErrors()[field]?.[0] ?? null;
+  }
+
+  setPhone(value: string): void {
+    this.formPhone.set(applyPhoneMask(value));
+    this.settingsPhoneError.set(null);
+  }
+
+  validatePhoneField(): void {
+    this.settingsPhoneError.set(getPhoneValidationMessage(this.formPhone()));
+  }
+
+  handlePhoneKeydown(event: KeyboardEvent): void {
+    if (shouldBlockPhoneKey(event)) {
+      event.preventDefault();
+    }
+  }
+
+  handlePhoneBeforeInput(event: InputEvent): void {
+    if (shouldBlockPhoneBeforeInput(event)) {
+      event.preventDefault();
+    }
   }
 
   hourFieldError(index: number, field: 'startLocalTime' | 'endLocalTime' | 'dayOfWeek'): string | null {

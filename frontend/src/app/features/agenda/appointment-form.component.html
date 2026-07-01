@@ -2,9 +2,11 @@
   <div class="form-header">
     <div class="form-header__copy">
       <h3 class="form-title">{{ mode === 'create' ? 'Novo agendamento' : 'Reagendar' }}</h3>
-      <p>Escolha cliente, profissional, serviço e horário real antes de confirmar.</p>
+      <p>{{ mode === 'create' ? 'Selecione cliente, profissional, serviço e horário para confirmar o agendamento.' : 'Confira os dados atuais e escolha um novo horário para o atendimento.' }}</p>
     </div>
-    <button type="button" class="btn-close" (click)="cancelled.emit()" aria-label="Fechar">✕</button>
+    <button type="button" class="btn-close" (click)="cancelled.emit()" aria-label="Fechar">
+      <span aria-hidden="true">&times;</span>
+    </button>
   </div>
 
   @if (error()) {
@@ -18,11 +20,14 @@
       @if (mode === 'create') {
         <section class="selection-section">
           <div class="selection-section__header">
-            <div>
-              <h4>Profissional</h4>
+            <div class="selection-section__intro">
+              <div class="selection-section__title">
+                <app-icon name="profile-2user" [size]="18" />
+                <h4>Profissional</h4>
+              </div>
               <p>Selecione quem vai executar o atendimento.</p>
             </div>
-            <span class="selection-section__meta">{{ professionalsState.items().length }} carregados</span>
+            <span class="selection-section__meta">{{ professionalsState.items().length }} profissionais</span>
           </div>
 
           <div class="field">
@@ -57,7 +62,10 @@
                 <span>{{ professional.email || professional.phone }}</span>
               </button>
             } @empty {
-              <div class="option-empty">Nenhuma profissional encontrada entre os itens carregados.</div>
+              <div class="option-empty option-empty--with-icon">
+                <app-icon name="information" [size]="18" />
+                <span>Nenhuma profissional encontrada na lista atual.</span>
+              </div>
             }
           </div>
 
@@ -75,11 +83,14 @@
 
         <section class="selection-section">
           <div class="selection-section__header">
-            <div>
-              <h4>Cliente</h4>
-              <p>Pesquise entre as clientes carregadas ou cadastre uma nova.</p>
+            <div class="selection-section__intro">
+              <div class="selection-section__title">
+                <app-icon name="people" [size]="18" />
+                <h4>Cliente</h4>
+              </div>
+              <p>Pesquise entre as clientes disponíveis ou cadastre uma nova.</p>
             </div>
-            <span class="selection-section__meta">{{ clientsState.items().length }} carregadas</span>
+            <span class="selection-section__meta">{{ clientsState.items().length }} clientes</span>
           </div>
 
           <div class="field">
@@ -114,7 +125,10 @@
                 <span>{{ client.phone || 'Sem telefone' }}</span>
               </button>
             } @empty {
-              <div class="option-empty">Nenhuma cliente encontrada entre os itens carregados.</div>
+              <div class="option-empty option-empty--with-icon">
+                <app-icon name="information" [size]="18" />
+                <span>Nenhuma cliente encontrada na lista atual.</span>
+              </div>
             }
           </div>
 
@@ -132,7 +146,8 @@
 
             @if (!showNewClient()) {
               <button type="button" class="btn-inline-link" (click)="openNewClient()">
-                + Cadastrar nova cliente
+                <app-icon name="profile-add" [size]="16" />
+                Nova cliente
               </button>
             }
           </div>
@@ -147,11 +162,14 @@
 
         <section class="selection-section">
           <div class="selection-section__header">
-            <div>
-              <h4>Serviço</h4>
+            <div class="selection-section__intro">
+              <div class="selection-section__title">
+                <app-icon name="scissor-1" [size]="18" />
+                <h4>Serviço</h4>
+              </div>
               <p>Escolha o serviço para calcular a duração e liberar os horários.</p>
             </div>
-            <span class="selection-section__meta">{{ servicesState.items().length }} carregados</span>
+            <span class="selection-section__meta">{{ servicesState.items().length }} serviços</span>
           </div>
 
           <div class="field">
@@ -184,9 +202,15 @@
               >
                 <strong>{{ service.name }}</strong>
                 <span class="option-card__meta">
-                  <span>{{ service.durationMinutes }} min</span>
+                  <span class="option-card__meta-item">
+                    <app-icon name="clock" [size]="14" />
+                    {{ service.durationMinutes }} min
+                  </span>
                   @if (formatServicePrice(service.priceAmount, service.currency)) {
-                    <span class="service-price">{{ formatServicePrice(service.priceAmount, service.currency) }}</span>
+                    <span class="option-card__meta-item service-price">
+                      <app-icon name="dollar-circle" [size]="14" />
+                      {{ formatServicePrice(service.priceAmount, service.currency) }}
+                    </span>
                   }
                 </span>
                 @if (service.description) {
@@ -194,7 +218,10 @@
                 }
               </button>
             } @empty {
-              <div class="option-empty">Nenhum serviço encontrado entre os itens carregados.</div>
+              <div class="option-empty option-empty--with-icon">
+                <app-icon name="information" [size]="18" />
+                <span>Nenhum serviço encontrado na lista atual.</span>
+              </div>
             }
           </div>
 
@@ -214,9 +241,12 @@
       @if (mode === 'reschedule') {
         <section class="selection-section selection-section--summary">
           <div class="selection-section__header">
-            <div>
-              <h4>Agendamento atual</h4>
-              <p>Confira os dados atuais antes de escolher um novo horário real.</p>
+            <div class="selection-section__intro">
+              <div class="selection-section__title">
+                <app-icon name="repeat" [size]="18" />
+                <h4>Agendamento atual</h4>
+              </div>
+              <p>Confira os dados atuais antes de escolher um novo horário.</p>
             </div>
             @if (durationLabel()) {
               <span class="selection-section__meta">{{ durationLabel() }}</span>
@@ -249,13 +279,16 @@
 
       <section class="selection-section">
         <div class="selection-section__header">
-          <div>
-            <h4>Data e horário</h4>
+          <div class="selection-section__intro">
+            <div class="selection-section__title">
+              <app-icon name="calendar-search" [size]="18" />
+              <h4>Data e horário</h4>
+            </div>
             <p>
               @if (activeProfessionalName()) {
                 {{ activeProfessionalName() }}
               } @else {
-                Selecione profissional e serviço para carregar horários reais.
+                Selecione profissional e serviço para carregar horários disponíveis.
               }
             </p>
             @if (activeProfessionalId() && durationMinutes() > 0) {
@@ -266,16 +299,28 @@
           </div>
           @if (mode === 'create' && selectedService()) {
             <span class="selection-section__meta selection-section__meta--service">
-              <span>{{ durationLabel() }}</span>
+              <span class="selection-section__meta-item">
+                <app-icon name="clock" [size]="14" />
+                {{ durationLabel() }}
+              </span>
               @if (selectedServicePriceLabel()) {
-                <span class="service-price">{{ selectedServicePriceLabel() }}</span>
+                <span class="selection-section__meta-item service-price">
+                  <app-icon name="dollar-circle" [size]="14" />
+                  {{ selectedServicePriceLabel() }}
+                </span>
               }
             </span>
           } @else if (mode === 'reschedule' && durationLabel()) {
             <span class="selection-section__meta selection-section__meta--service">
-              <span>{{ durationLabel() }}</span>
+              <span class="selection-section__meta-item">
+                <app-icon name="clock" [size]="14" />
+                {{ durationLabel() }}
+              </span>
               @if (currentServicePriceLabel()) {
-                <span class="service-price">{{ currentServicePriceLabel() }}</span>
+                <span class="selection-section__meta-item service-price">
+                  <app-icon name="dollar-circle" [size]="14" />
+                  {{ currentServicePriceLabel() }}
+                </span>
               }
             </span>
           }
@@ -294,14 +339,22 @@
             (slotSelected)="onSlotSelected($event)"
           />
         } @else if (mode === 'create') {
-          <p class="picker-hint">Escolha profissional e serviço para ver os horários disponíveis do sistema.</p>
+          <p class="picker-hint">
+            <app-icon name="information" [size]="16" />
+            Escolha profissional e serviço para ver os horários disponíveis do sistema.
+          </p>
         }
 
         @if (timingSelection(); as timing) {
           <div class="time-range-editor">
             <div class="time-range-editor__grid">
               <div class="field">
-                <label class="field-label">Horário inicial</label>
+                <label class="field-label">
+                  <span class="field-label__content">
+                    <app-icon class="field-label__icon" name="clock" [size]="16" />
+                    Horário inicial
+                  </span>
+                </label>
                 <div class="time-range-editor__static">
                   <strong>{{ timing.startTime }}</strong>
                   <span>{{ timing.startDate }}</span>
@@ -309,7 +362,12 @@
               </div>
 
               <div class="field">
-                <label class="field-label" for="af-end-time">Horário final</label>
+                <label class="field-label" for="af-end-time">
+                  <span class="field-label__content">
+                    <app-icon class="field-label__icon" name="clock" [size]="16" />
+                    Horário final
+                  </span>
+                </label>
                 <app-time-picker
                   ariaLabel="Selecionar horário final do agendamento"
                   [value]="selectedEndTime()"
@@ -342,6 +400,7 @@
           [disabled]="!canSubmit() || isSaving()"
           [attr.aria-busy]="isSaving()"
         >
+          <app-icon [name]="isSaving() ? 'loading' : 'check-tick'" [size]="16" [spin]="isSaving()" />
           {{ isSaving() ? 'Salvando…' : (mode === 'create' ? 'Criar agendamento' : 'Reagendar') }}
         </button>
       </div>

@@ -11,10 +11,12 @@ import {
 } from '../../core/utils/phone';
 import { getEmailValidationMessage, normalizeEmail } from '../../core/utils/email';
 import type { ClientResponse, CreateClientRequest } from '../../core/api/api.models';
+import { AppIconComponent } from '../../shared/app-icon.component';
 
 @Component({
   selector: 'app-client-quick-form',
   standalone: true,
+  imports: [AppIconComponent],
   template: `
     <form class="form-card client-quick-form" (submit)="save($event)" novalidate aria-label="Formulário rápido de cliente">
       <div class="client-quick-form__header">
@@ -27,7 +29,12 @@ import type { ClientResponse, CreateClientRequest } from '../../core/api/api.mod
       }
 
       <div class="field">
-        <label class="field-label" for="qf-name">Nome</label>
+        <label class="field-label" for="qf-name">
+          <span class="field-label__content">
+            <app-icon class="field-label__icon" name="people" [size]="16" />
+            Nome
+          </span>
+        </label>
         <input
           id="qf-name"
           class="field-input"
@@ -44,23 +51,33 @@ import type { ClientResponse, CreateClientRequest } from '../../core/api/api.mod
       </div>
 
       <div class="field">
-        <label class="field-label" for="qf-phone">Telefone</label>
-        <input
-          id="qf-phone"
-          class="field-input"
-          type="tel"
-          required
-          autocomplete="tel-national"
-          inputmode="numeric"
-          placeholder="(00) 00000-0000"
-          [attr.maxlength]="phoneMaxLength"
-          [value]="form().phone"
-          (input)="set('phone', $any($event.target).value)"
-          (keydown)="handlePhoneKeydown($event)"
-          (beforeinput)="handlePhoneBeforeInput($event)"
-          (blur)="validatePhoneField()"
-          [attr.aria-invalid]="phoneError() || fieldError('phone') ? 'true' : null"
-        >
+        <label class="field-label" for="qf-phone">
+          <span class="field-label__content">
+            <app-icon class="field-label__icon" name="call" [size]="16" />
+            Telefone
+          </span>
+        </label>
+        <div class="field-input-group">
+          <span class="field-input-icon" aria-hidden="true">
+            <app-icon name="call" [size]="16" />
+          </span>
+          <input
+            id="qf-phone"
+            class="field-input"
+            type="tel"
+            required
+            autocomplete="tel-national"
+            inputmode="numeric"
+            placeholder="(00) 00000-0000"
+            [attr.maxlength]="phoneMaxLength"
+            [value]="form().phone"
+            (input)="set('phone', $any($event.target).value)"
+            (keydown)="handlePhoneKeydown($event)"
+            (beforeinput)="handlePhoneBeforeInput($event)"
+            (blur)="validatePhoneField()"
+            [attr.aria-invalid]="phoneError() || fieldError('phone') ? 'true' : null"
+          >
+        </div>
         @if (phoneError()) {
           <span class="field-error" role="alert">{{ phoneError() }}</span>
         } @else if (fieldError('phone')) {
@@ -69,7 +86,12 @@ import type { ClientResponse, CreateClientRequest } from '../../core/api/api.mod
       </div>
 
       <div class="field">
-        <label class="field-label" for="qf-email">E-mail</label>
+        <label class="field-label" for="qf-email">
+          <span class="field-label__content">
+            <app-icon class="field-label__icon" name="information" [size]="16" />
+            E-mail
+          </span>
+        </label>
         <input
           id="qf-email"
           class="field-input"
@@ -88,7 +110,12 @@ import type { ClientResponse, CreateClientRequest } from '../../core/api/api.mod
       </div>
 
       <div class="field">
-        <label class="field-label" for="qf-notes">Observações</label>
+        <label class="field-label" for="qf-notes">
+          <span class="field-label__content">
+            <app-icon class="field-label__icon" name="information" [size]="16" />
+            Observações
+          </span>
+        </label>
         <textarea
           id="qf-notes"
           class="field-input field-textarea"
@@ -101,6 +128,7 @@ import type { ClientResponse, CreateClientRequest } from '../../core/api/api.mod
       <div class="form-actions">
         <button type="button" class="btn-ghost" (click)="cancelled.emit()">Cancelar</button>
         <button type="submit" class="btn-primary" [disabled]="isSaving()">
+          <app-icon [name]="isSaving() ? 'loading' : 'check-tick'" [size]="16" [spin]="isSaving()" />
           {{ isSaving() ? 'Salvando…' : 'Salvar cliente' }}
         </button>
       </div>

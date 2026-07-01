@@ -1,7 +1,22 @@
 <div class="page-layout">
   <header class="page-header">
-    <h2 class="page-title">Bloqueios do Salão</h2>
-    <button class="btn-add" (click)="openCreate()" aria-label="Novo bloqueio">+ Novo</button>
+    <div class="page-header__content">
+      <p class="page-header__eyebrow">BLOQUEIOS</p>
+      <div class="page-header__title-row">
+        <span class="page-header__icon" aria-hidden="true">
+          <app-icon name="calendar-remove" [size]="22" />
+        </span>
+        <h2 class="page-title">Bloqueios</h2>
+      </div>
+      <p class="page-header__description">Reserve períodos indisponíveis para o salão sem mexer na agenda existente.</p>
+    </div>
+
+    <div class="page-header__actions">
+      <button class="btn-add" (click)="openCreate()" aria-label="Novo bloqueio">
+        <app-icon name="calendar-add" [size]="18" />
+        Novo bloqueio
+      </button>
+    </div>
   </header>
 
   @if (pageError()) { <div class="state-error" role="alert">{{ pageError() }}</div> }
@@ -9,7 +24,7 @@
   @if (showForm()) {
     <app-modal-sheet
       title="Novo bloqueio"
-      description="Defina um intervalo em que o salão não poderá receber atendimentos."
+      description="Reserve um período indisponível na agenda."
       [disableClose]="isSaving()"
       (closed)="closeForm()"
     >
@@ -21,7 +36,7 @@
         <section class="sheet-section sheet-section--highlight">
           <div class="sheet-section__header">
             <h4>Intervalo do bloqueio</h4>
-            <p>Escolha data e hora de início e fim mantendo o mesmo payload já esperado pela API.</p>
+            <p>Escolha a data e o horário em que o salão ficará indisponível.</p>
           </div>
 
           <div class="fields-row">
@@ -78,7 +93,7 @@
         <section class="sheet-section">
           <div class="sheet-section__header">
             <h4>Motivo</h4>
-            <p>Esse texto aparece na listagem e ajuda a identificar rapidamente o contexto do bloqueio.</p>
+            <p>Descreva rapidamente o motivo do bloqueio.</p>
           </div>
 
           <div class="field">
@@ -97,6 +112,7 @@
       <div sheet-footer class="form-actions">
         <button type="button" class="btn-ghost" (click)="closeForm()" [disabled]="isSaving()">Cancelar</button>
         <button type="submit" class="btn-primary" form="block-sheet-form" [disabled]="isSaving()">
+          <app-icon [name]="isSaving() ? 'loading' : 'check-tick'" [size]="16" [spin]="isSaving()" />
           {{ isSaving() ? 'Salvando…' : 'Criar bloqueio' }}
         </button>
       </div>
@@ -124,7 +140,9 @@
           </div>
           <div class="item-actions">
             <button class="btn-icon btn-icon--danger" (click)="delete(block)"
-              [attr.aria-label]="'Remover bloqueio: ' + block.reason">✕</button>
+              [attr.aria-label]="'Remover bloqueio: ' + block.reason">
+              <app-icon name="trash-square" [size]="16" />
+            </button>
           </div>
         </li>
       } @empty {
@@ -138,6 +156,7 @@
           <div class="state-error" role="alert">{{ loadMoreError() }}</div>
         }
         <button class="btn-secondary" type="button" (click)="loadMore()" [disabled]="isLoadingMore()">
+          <app-icon [name]="isLoadingMore() ? 'loading' : 'add-circle'" [size]="16" [spin]="isLoadingMore()" />
           {{ isLoadingMore() ? 'Carregando…' : 'Carregar mais' }}
         </button>
       </div>

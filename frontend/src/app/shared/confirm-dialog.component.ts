@@ -1,9 +1,11 @@
 import { Component, HostListener, inject } from '@angular/core';
+import { AppIconComponent } from './app-icon.component';
 import { ConfirmDialogService } from './confirm-dialog.service';
 
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
+  imports: [AppIconComponent],
   template: `
     @if (dialog.state(); as state) {
       <div class="confirm-dialog">
@@ -35,9 +37,11 @@ import { ConfirmDialogService } from './confirm-dialog.service';
             <button
               type="button"
               class="btn-primary"
+              [class.confirm-dialog__confirm--default]="state.tone !== 'danger'"
               [class.confirm-dialog__confirm--danger]="state.tone === 'danger'"
               (click)="dialog.confirm()"
             >
+              <app-icon name="check-tick" [size]="16" />
               {{ state.confirmLabel }}
             </button>
           </div>
