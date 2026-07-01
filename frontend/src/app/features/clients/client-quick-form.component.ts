@@ -1,7 +1,15 @@
 import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { ClientsApiService, ClientPhoneDuplicateError } from './clients-api.service';
 import { mapApiErrorToUi } from '../../core/api/api-error.utils';
-import { applyPhoneMask, digitsOnly } from '../../core/utils/phone';
+import {
+  applyPhoneMask,
+  digitsOnly,
+  getPhoneValidationMessage,
+  PHONE_MASK_MAX_LENGTH,
+  shouldBlockPhoneBeforeInput,
+  shouldBlockPhoneKey,
+} from '../../core/utils/phone';
+import { getEmailValidationMessage, normalizeEmail } from '../../core/utils/email';
 import type { ClientResponse, CreateClientRequest } from '../../core/api/api.models';
 
 @Component({
@@ -25,6 +33,7 @@ import type { ClientResponse, CreateClientRequest } from '../../core/api/api.mod
           class="field-input"
           type="text"
           required
+          autocomplete="name"
           [value]="form().name"
           (input)="set('name', $any($event.target).value)"
           [attr.aria-invalid]="fieldError('name') ? 'true' : null"
@@ -41,9 +50,15 @@ import type { ClientResponse, CreateClientRequest } from '../../core/api/api.mod
           class="field-input"
           type="tel"
           required
+          autocomplete="tel-national"
+          inputmode="numeric"
           placeholder="(00) 00000-0000"
+          [attr.maxlength]="phoneMaxLength"
           [value]="form().phone"
           (input)="set('phone', $any($event.target).value)"
+          (keydown)="handlePhoneKeydown($event)"
+          (beforeinput)="handlePhoneBeforeInput($event)"
+          (blur)="validatePhoneField()"
           [attr.aria-invalid]="phoneError() || fieldError('phone') ? 'true' : null"
         >
         @if (phoneError()) {
@@ -59,11 +74,15 @@ import type { ClientResponse, CreateClientRequest } from '../../core/api/api.mod
           id="qf-email"
           class="field-input"
           type="email"
+          autocomplete="email"
           [value]="form().email"
           (input)="set('email', $any($event.target).value)"
-          [attr.aria-invalid]="fieldError('email') ? 'true' : null"
+          (blur)="normalizeEmailField()"
+          [attr.aria-invalid]="emailError() || fieldError('email') ? 'true' : null"
         >
-        @if (fieldError('email')) {
+        @if (emailError()) {
+          <span class="field-error" role="alert">{{ emailError() }}</span>
+        } @else if (fieldError('email')) {
           <span class="field-error" role="alert">{{ fieldError('email') }}</span>
         }
       </div>
@@ -100,7 +119,9 @@ export class ClientQuickFormComponent {
   readonly isSaving = signal(false);
   readonly error = signal<string | null>(null);
   readonly phoneError = signal<string | null>(null);
+  readonly emailError = signal<string | null>(null);
   readonly fieldErrors = signal<Record<string, string[]>>({});
+  readonly phoneMaxLength = PHONE_MASK_MAX_LENGTH;
 
   setClient(client: ClientResponse): void {
     this.editingId.set(client.id);
@@ -117,6 +138,7 @@ export class ClientQuickFormComponent {
     this.form.set({ name: '', phone: '', email: '', notes: '' });
     this.error.set(null);
     this.phoneError.set(null);
+    this.emailError.set(null);
     this.fieldErrors.set({});
   }
 
@@ -126,6 +148,10 @@ export class ClientQuickFormComponent {
 
     if (key === 'phone') {
       this.phoneError.set(null);
+    }
+
+    if (key === 'email') {
+      this.emailError.set(null);
     }
 
     this.fieldErrors.update(errors => {
@@ -139,17 +165,45 @@ export class ClientQuickFormComponent {
     return this.fieldErrors()[field]?.[0] ?? null;
   }
 
+  validatePhoneField(): void {
+    this.phoneError.set(getPhoneValidationMessage(this.form().phone));
+  }
+
+  handlePhoneKeydown(event: KeyboardEvent): void {
+    if (shouldBlockPhoneKey(event)) {
+      event.preventDefault();
+    }
+  }
+
+  handlePhoneBeforeInput(event: InputEvent): void {
+    if (shouldBlockPhoneBeforeInput(event)) {
+      event.preventDefault();
+    }
+  }
+
+  normalizeEmailField(): void {
+    this.form.update(form => ({ ...form, email: normalizeEmail(form.email) }));
+    this.emailError.set(getEmailValidationMessage(this.form().email));
+  }
+
   async save(event: Event): Promise<void> {
     event.preventDefault();
-    this.isSaving.set(true);
     this.error.set(null);
+    this.validatePhoneField();
+    this.normalizeEmailField();
+    if (this.phoneError() || this.emailError()) {
+      return;
+    }
+    this.isSaving.set(true);
     this.phoneError.set(null);
+    this.emailError.set(null);
     this.fieldErrors.set({});
 
     try {
       const payload: CreateClientRequest = {
         ...this.form(),
         phone: digitsOnly(this.form().phone),
+        email: normalizeEmail(this.form().email),
       };
 
       const result = this.editingId()

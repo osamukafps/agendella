@@ -1,0 +1,43 @@
+.sheet-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sheet-section {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.sheet-section--highlight {
+  background:
+    linear-gradient(180deg, rgba(245, 232, 237, 0.62), rgba(255, 255, 255, 0.92));
+}
+
+.sheet-section__header {
+  display: grid;
+  gap: 4px;
+}
+
+.sheet-section__header h4 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.sheet-section__header p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+@media (max-width: 767px) {
+  .sheet-section {
+    padding: var(--space-3);
+  }
+}

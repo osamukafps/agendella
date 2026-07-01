@@ -8,9 +8,19 @@ import {
   loadCursorPage,
   mergeCursorItemsById,
 } from '../../core/api/cursor-pagination';
-import { applyPhoneMask, digitsOnly, formatStoredPhone } from '../../core/utils/phone';
+import {
+  applyPhoneMask,
+  digitsOnly,
+  formatStoredPhone,
+  getPhoneValidationMessage,
+  PHONE_MASK_MAX_LENGTH,
+  shouldBlockPhoneBeforeInput,
+  shouldBlockPhoneKey,
+} from '../../core/utils/phone';
+import { getEmailValidationMessage, normalizeEmail } from '../../core/utils/email';
 import type { ProfessionalResponse, CreateProfessionalRequest } from '../../core/api/api.models';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+import { ModalSheetComponent } from '../../shared/modal-sheet.component';
 
 const EMPTY_FORM: CreateProfessionalRequest = { name: '', phone: '', email: '' };
 const PROFESSIONALS_PAGE_SIZE = 20;
@@ -18,7 +28,7 @@ const PROFESSIONALS_PAGE_SIZE = 20;
 @Component({
   selector: 'app-professionals-page',
   standalone: true,
-  imports: [WeeklyAvailabilityEditorComponent],
+  imports: [WeeklyAvailabilityEditorComponent, ModalSheetComponent],
   templateUrl: './professionals-page.component.html',
   styleUrl: './professionals-page.component.css',
 })
@@ -41,8 +51,11 @@ export class ProfessionalsPageComponent implements OnInit {
   readonly editingId    = signal<string | null>(null);
   readonly form         = signal<CreateProfessionalRequest>({ ...EMPTY_FORM });
   readonly expandedId   = signal<string | null>(null);
+  readonly phoneError   = signal<string | null>(null);
+  readonly emailError   = signal<string | null>(null);
   readonly fieldErrors  = signal<Record<string, string[]>>({});
   readonly formatStoredPhone = formatStoredPhone;
+  readonly phoneMaxLength = PHONE_MASK_MAX_LENGTH;
 
   async ngOnInit(): Promise<void> { await this.load(); }
 
@@ -67,6 +80,8 @@ export class ProfessionalsPageComponent implements OnInit {
     this.formMode.set('create');
     this.expandedId.set(null);
     this.formError.set(null);
+    this.phoneError.set(null);
+    this.emailError.set(null);
     this.fieldErrors.set({});
   }
 
@@ -76,12 +91,16 @@ export class ProfessionalsPageComponent implements OnInit {
     this.formMode.set('edit');
     this.expandedId.set(null);
     this.formError.set(null);
+    this.phoneError.set(null);
+    this.emailError.set(null);
     this.fieldErrors.set({});
   }
 
   closeForm(): void {
     this.formMode.set(null);
     this.formError.set(null);
+    this.phoneError.set(null);
+    this.emailError.set(null);
     this.fieldErrors.set({});
   }
 
@@ -93,6 +112,8 @@ export class ProfessionalsPageComponent implements OnInit {
   setField<K extends keyof CreateProfessionalRequest>(key: K, value: string): void {
     const nextValue = key === 'phone' ? applyPhoneMask(value) : value;
     this.form.update(f => ({ ...f, [key]: nextValue }));
+    if (key === 'phone') this.phoneError.set(null);
+    if (key === 'email') this.emailError.set(null);
     this.fieldErrors.update(errors => {
       const next = { ...errors };
       delete next[key];
@@ -100,15 +121,44 @@ export class ProfessionalsPageComponent implements OnInit {
     });
   }
 
+  validatePhoneField(): void {
+    this.phoneError.set(getPhoneValidationMessage(this.form().phone));
+  }
+
+  handlePhoneKeydown(event: KeyboardEvent): void {
+    if (shouldBlockPhoneKey(event)) {
+      event.preventDefault();
+    }
+  }
+
+  handlePhoneBeforeInput(event: InputEvent): void {
+    if (shouldBlockPhoneBeforeInput(event)) {
+      event.preventDefault();
+    }
+  }
+
+  normalizeEmailField(): void {
+    this.form.update(form => ({ ...form, email: normalizeEmail(form.email) }));
+    this.emailError.set(getEmailValidationMessage(this.form().email, true));
+  }
+
   async save(event: Event): Promise<void> {
     event.preventDefault();
-    this.isSaving.set(true);
     this.formError.set(null);
+    this.validatePhoneField();
+    this.normalizeEmailField();
+    if (this.phoneError() || this.emailError()) {
+      return;
+    }
+    this.isSaving.set(true);
+    this.phoneError.set(null);
+    this.emailError.set(null);
     this.fieldErrors.set({});
     try {
       const payload = {
         ...this.form(),
         phone: digitsOnly(this.form().phone),
+        email: normalizeEmail(this.form().email),
       };
       if (this.formMode() === 'edit' && this.editingId()) {
         const updated = await this.api.update(this.editingId()!, payload);

@@ -7,51 +7,75 @@
   @if (pageError()) { <div class="state-error" role="alert">{{ pageError() }}</div> }
 
   @if (formMode()) {
-    <div class="form-card">
-      <h3 class="form-title">{{ formMode() === 'create' ? 'Novo profissional' : 'Editar profissional' }}</h3>
-      <form (submit)="save($event)" novalidate>
+    <app-modal-sheet
+      [title]="formMode() === 'create' ? 'Nova profissional' : 'Editar profissional'"
+      description="Os dados principais ficam em um sheet mobile-first, sem afetar disponibilidade ou desativação."
+      [disableClose]="isSaving()"
+      (closed)="closeForm()"
+    >
+      <form sheet-body id="professional-sheet-form" class="sheet-form" (submit)="save($event)" novalidate>
         @if (formError()) {
           <div class="state-error" role="alert">{{ formError() }}</div>
         }
 
-        <div class="field">
-          <label class="field-label" for="pro-name">Nome</label>
-          <input id="pro-name" class="field-input" type="text" required
-            [value]="form().name"
-            (input)="setField('name', $any($event.target).value)"
-            [attr.aria-invalid]="fieldError('name') ? 'true' : null">
-          @if (fieldError('name')) {
-            <span class="field-error" role="alert">{{ fieldError('name') }}</span>
-          }
-        </div>
-        <div class="field">
-          <label class="field-label" for="pro-phone">Telefone</label>
-          <input id="pro-phone" class="field-input" type="tel"
-            [value]="form().phone"
-            (input)="setField('phone', $any($event.target).value)"
-            [attr.aria-invalid]="fieldError('phone') ? 'true' : null">
-          @if (fieldError('phone')) {
-            <span class="field-error" role="alert">{{ fieldError('phone') }}</span>
-          }
-        </div>
-        <div class="field">
-          <label class="field-label" for="pro-email">E-mail</label>
-          <input id="pro-email" class="field-input" type="email"
-            [value]="form().email"
-            (input)="setField('email', $any($event.target).value)"
-            [attr.aria-invalid]="fieldError('email') ? 'true' : null">
-          @if (fieldError('email')) {
-            <span class="field-error" role="alert">{{ fieldError('email') }}</span>
-          }
-        </div>
-        <div class="form-actions">
-          <button type="button" class="btn-ghost" (click)="closeForm()">Cancelar</button>
-          <button type="submit" class="btn-primary" [disabled]="isSaving()">
-            {{ isSaving() ? 'Salvando…' : 'Salvar' }}
-          </button>
-        </div>
+        <section class="sheet-section sheet-section--highlight">
+          <div class="sheet-section__header">
+            <h4>Dados da profissional</h4>
+            <p>Contato principal com máscara de telefone e validação visual de e-mail.</p>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="pro-name">Nome</label>
+            <input id="pro-name" class="field-input" type="text" required autocomplete="name"
+              [value]="form().name"
+              (input)="setField('name', $any($event.target).value)"
+              [attr.aria-invalid]="fieldError('name') ? 'true' : null">
+            @if (fieldError('name')) {
+              <span class="field-error" role="alert">{{ fieldError('name') }}</span>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="pro-phone">Telefone</label>
+            <input id="pro-phone" class="field-input" type="tel" required autocomplete="tel-national" inputmode="numeric"
+              placeholder="(00) 00000-0000"
+              [attr.maxlength]="phoneMaxLength"
+              [value]="form().phone"
+              (input)="setField('phone', $any($event.target).value)"
+              (keydown)="handlePhoneKeydown($event)"
+              (beforeinput)="handlePhoneBeforeInput($event)"
+              (blur)="validatePhoneField()"
+              [attr.aria-invalid]="phoneError() || fieldError('phone') ? 'true' : null">
+            @if (phoneError()) {
+              <span class="field-error" role="alert">{{ phoneError() }}</span>
+            } @else if (fieldError('phone')) {
+              <span class="field-error" role="alert">{{ fieldError('phone') }}</span>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="pro-email">E-mail</label>
+            <input id="pro-email" class="field-input" type="email" required autocomplete="email"
+              [value]="form().email"
+              (input)="setField('email', $any($event.target).value)"
+              (blur)="normalizeEmailField()"
+              [attr.aria-invalid]="emailError() || fieldError('email') ? 'true' : null">
+            @if (emailError()) {
+              <span class="field-error" role="alert">{{ emailError() }}</span>
+            } @else if (fieldError('email')) {
+              <span class="field-error" role="alert">{{ fieldError('email') }}</span>
+            }
+          </div>
+        </section>
       </form>
-    </div>
+
+      <div sheet-footer class="form-actions">
+        <button type="button" class="btn-ghost" (click)="closeForm()" [disabled]="isSaving()">Cancelar</button>
+        <button type="submit" class="btn-primary" form="professional-sheet-form" [disabled]="isSaving()">
+          {{ isSaving() ? 'Salvando…' : 'Salvar profissional' }}
+        </button>
+      </div>
+    </app-modal-sheet>
   }
 
   @if (isLoading() && !items().length) {

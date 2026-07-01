@@ -9,6 +9,7 @@ import {
 } from '../../core/api/cursor-pagination';
 import type { ServiceResponse, CreateServiceRequest } from '../../core/api/api.models';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+import { ModalSheetComponent } from '../../shared/modal-sheet.component';
 
 const EMPTY_FORM: CreateServiceRequest = {
   name: '', description: '', durationMinutes: 60, priceAmount: 0, currency: 'BRL',
@@ -18,6 +19,7 @@ const SERVICES_PAGE_SIZE = 20;
 @Component({
   selector: 'app-services-page',
   standalone: true,
+  imports: [ModalSheetComponent],
   templateUrl: './services-page.component.html',
   styleUrl: './services-page.component.css',
 })
@@ -98,8 +100,8 @@ export class ServicesPageComponent implements OnInit {
 
   async save(event: Event): Promise<void> {
     event.preventDefault();
-    this.isSaving.set(true);
     this.formError.set(null);
+    this.isSaving.set(true);
     this.fieldErrors.set({});
     try {
       if (this.formMode() === 'edit' && this.editingId()) {
