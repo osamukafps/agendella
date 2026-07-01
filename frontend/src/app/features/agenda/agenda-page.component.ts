@@ -349,14 +349,6 @@ export class AgendaPageComponent implements OnInit, OnDestroy {
         tone: 'success',
       },
       {
-        id: 'cancelled',
-        label: 'Cancelados',
-        value: String(cancelled),
-        helper: 'Compromissos cancelados no mês',
-        icon: 'archive-minus',
-        tone: 'danger',
-      },
-      {
         id: 'no-show',
         label: 'Não compareceu',
         value: String(noShow),

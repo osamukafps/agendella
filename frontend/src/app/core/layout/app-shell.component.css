@@ -134,6 +134,10 @@
 }
 
 .shell-topbar__greeting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.28em;
   margin: 0;
   color: var(--color-text-primary);
   font-family: var(--font-display);
@@ -143,14 +147,15 @@
   letter-spacing: -0.02em;
 }
 
+.shell-topbar__greeting-text {
+  min-width: 0;
+}
+
 .shell-topbar__greeting-flower {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 0.16em;
-  font-size: 0.96em;
-  line-height: 1;
-  transform: translateY(-0.06em);
+  color: rgba(188, 107, 136, 0.92);
 }
 
 .shell-topbar__meta {
@@ -173,6 +178,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   flex: 0 0 auto;
   min-height: 48px;
   padding: 0 var(--space-5);
