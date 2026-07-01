@@ -22,6 +22,16 @@ dotnet test backend/Agendella.sln
 dotnet run --project backend/Agendella.Api
 ```
 
+## Phase 12 Validation Commands
+
+```bash
+dotnet build backend/Agendella.sln
+dotnet test backend/Agendella.Tests/Agendella.Tests.csproj
+curl -i http://localhost:5070/healthz
+curl -i http://localhost:5070/healthz/ready
+curl -i -X POST http://localhost:5070/auth/refresh -H "X-CSRF-Protection: 1"
+```
+
 ## EF Core Migrations
 
 ```bash

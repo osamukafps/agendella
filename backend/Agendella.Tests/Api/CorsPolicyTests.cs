@@ -1,6 +1,6 @@
 using Agendella.Api.Configuration;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +23,7 @@ public sealed class CorsPolicyTests
         services.AddOptions();
         services.AddConfiguredCors(configuration);
 
-        using var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
         var corsService = provider.GetRequiredService<ICorsService>();
         var corsPolicyProvider = provider.GetRequiredService<ICorsPolicyProvider>();
 
@@ -37,11 +37,11 @@ public sealed class CorsPolicyTests
         Assert.True(allowedResult.IsOriginAllowed);
         Assert.True(allowedResult.SupportsCredentials);
 
-        var rejectedContext = new DefaultHttpContext();
-        rejectedContext.Request.Headers.Origin = "https://malicious.example.com";
-        rejectedContext.Request.Method = HttpMethods.Post;
+        var deniedContext = new DefaultHttpContext();
+        deniedContext.Request.Headers.Origin = "https://malicious.example.com";
+        deniedContext.Request.Method = HttpMethods.Post;
 
-        var rejectedResult = corsService.EvaluatePolicy(rejectedContext, policy!);
-        Assert.False(rejectedResult.IsOriginAllowed);
+        var deniedResult = corsService.EvaluatePolicy(deniedContext, policy!);
+        Assert.False(deniedResult.IsOriginAllowed);
     }
 }

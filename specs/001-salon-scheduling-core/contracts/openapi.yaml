@@ -733,6 +733,22 @@ paths:
           $ref: '#/components/responses/TooManyRequestsError'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /healthz:
+    get:
+      summary: Liveness probe for the API process
+      responses:
+        '200':
+          description: API process is alive.
+        '503':
+          $ref: '#/components/responses/InternalServerError'
+  /healthz/ready:
+    get:
+      summary: Readiness probe for the API and PostgreSQL
+      responses:
+        '200':
+          description: API and PostgreSQL are ready.
+        '503':
+          $ref: '#/components/responses/InternalServerError'
   /salon:
     get:
       summary: Get active tenant salon profile

@@ -301,15 +301,15 @@
 
 **Goal**: Add operational hardening, privacy-safe structured logging, health checks, OpenAPI completeness, and final quickstart validation.
 
-- [ ] T156 [P] Add automated tests for `/auth/login`, `/auth/refresh`, and authenticated endpoint rate limit policies in `backend/Agendella.Tests/Api/RateLimitingTests.cs` (deps: T051)
-- [ ] T157 [P] Add automated tests that structured logs include tenant id but avoid customer PII leakage in `backend/Agendella.Tests/Api/StructuredLoggingPrivacyTests.cs` (deps: T013, T035)
-- [ ] T158 [P] Add automated healthcheck tests for API and PostgreSQL readiness in `backend/Agendella.Tests/Api/HealthCheckTests.cs` (deps: T012)
-- [ ] T159 Implement ASP.NET Core rate limiting policies and `429` structured responses in `backend/Agendella.Api/Configuration/RateLimitingConfiguration.cs` and `backend/Agendella.Api/Program.cs` (deps: T156)
-- [ ] T160 Implement privacy-safe structured logging enrichment with tenant, collaborator, correlation id, and request metadata in `backend/Agendella.Api/Middleware/RequestLoggingMiddleware.cs` and `backend/Agendella.Api/Program.cs` (deps: T157)
-- [ ] T161 Implement API and PostgreSQL health checks in `backend/Agendella.Api/Health/DatabaseHealthCheck.cs` and `backend/Agendella.Api/Program.cs` (deps: T158)
-- [ ] T162 [P] Update OpenAPI generation metadata and verify all 4xx/5xx responses reference `ErrorResponse` in `backend/Agendella.Api/Program.cs` and `specs/001-salon-scheduling-core/contracts/openapi.yaml` (deps: T014, T098, T112, T113)
-- [ ] T163 [P] Add backend quickstart validation script commands to `docs/local-development.md` (deps: T159, T160, T161)
-- [ ] T164 [P] Add frontend responsive smoke tests for mobile viewport critical flows in `frontend/src/app/app.responsive.spec.ts` (deps: T125, T146, T155)
+- [x] T156 [P] Add automated tests for `/auth/login`, `/auth/refresh`, and authenticated endpoint rate limit policies in `backend/Agendella.Tests/Api/RateLimitingTests.cs` (deps: T051)
+- [x] T157 [P] Add automated tests that structured logs include tenant id but avoid customer PII leakage in `backend/Agendella.Tests/Api/StructuredLoggingPrivacyTests.cs` (deps: T013, T035)
+- [x] T158 [P] Add automated healthcheck tests for API and PostgreSQL readiness in `backend/Agendella.Tests/Api/HealthCheckTests.cs` (deps: T012)
+- [x] T159 Implement ASP.NET Core rate limiting policies and `429` structured responses in `backend/Agendella.Api/Configuration/RateLimitingConfiguration.cs` and `backend/Agendella.Api/Program.cs` (deps: T156)
+- [x] T160 Implement privacy-safe structured logging enrichment with tenant, collaborator, correlation id, and request metadata in `backend/Agendella.Api/Middleware/RequestLoggingMiddleware.cs` and `backend/Agendella.Api/Program.cs` (deps: T157)
+- [x] T161 Implement API and PostgreSQL health checks in `backend/Agendella.Api/Health/DatabaseHealthCheck.cs` and `backend/Agendella.Api/Program.cs` (deps: T158)
+- [x] T162 [P] Update OpenAPI generation metadata and verify all 4xx/5xx responses reference `ErrorResponse` in `backend/Agendella.Api/Program.cs` and `specs/001-salon-scheduling-core/contracts/openapi.yaml` (deps: T014, T098, T112, T113)
+- [x] T163 [P] Add backend quickstart validation script commands to `docs/local-development.md` (deps: T159, T160, T161)
+- [x] T164 [P] Add frontend responsive smoke tests for mobile viewport critical flows in `frontend/src/app/app.responsive.spec.ts` (deps: T125, T146, T155)
 
 **Checkpoint**: Security hardening, observability, health checks, and final validation support are complete.
 

@@ -3,12 +3,14 @@ using System.Security.Claims;
 using Agendella.Api.Auth;
 using Agendella.Api.Contracts.Auth;
 using Agendella.Api.Contracts.Common;
+using Agendella.Api.Configuration;
 using Agendella.Application.Auth;
 using Agendella.Application.Common.Errors;
 using Agendella.Application.Salons;
 using Agendella.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Agendella.Api.Controllers;
 
@@ -23,6 +25,7 @@ public sealed class AuthController(
 {
     [AllowAnonymous]
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitingConfiguration.LoginPolicy)]
     [ProducesResponseType<TokenResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ErrorResponse>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ErrorResponse>(StatusCodes.Status401Unauthorized)]
@@ -38,6 +41,7 @@ public sealed class AuthController(
 
     [AllowAnonymous]
     [HttpPost("refresh")]
+    [EnableRateLimiting(RateLimitingConfiguration.RefreshPolicy)]
     [ProducesResponseType<TokenResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ErrorResponse>(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<TokenResponse>> Refresh(CancellationToken cancellationToken)
@@ -66,6 +70,7 @@ public sealed class AuthController(
 
     [AllowAnonymous]
     [HttpPost("logout")]
+    [EnableRateLimiting(RateLimitingConfiguration.RefreshPolicy)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
